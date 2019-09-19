@@ -4,12 +4,15 @@
 #pylint:disable=E1101
 
 from migen import *
+from migen.util.misc import xdir
+
 from litex_boards.partner.targets.fomu import BaseSoC
 from litex.soc.integration import SoCCore
 from litex.soc.integration.soc_core import csr_map_update
 from litex.soc.integration.builder import Builder
 from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField
+from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager
 
 def bit_range(start, end):
     end -= 1
@@ -58,6 +61,65 @@ class DocumentedCSRRegion:
 
         for csr in self.raw_csrs:
             self.document_csr(csr)
+
+    def gather_sources(self, mod):
+        sources = []
+        if hasattr(mod, "event_managers"):
+            print("Mod {} has an event_managers".format(mod))
+            # XXX Should this be depth-first or breadth-first?
+            for source in mod.event_managers:
+                for k,v in xdir(source, True):
+                    sources += self.gather_sources(v)
+        if isinstance(mod, EventManager):
+            print("FoundEventManager Mod {} is an EventManager".format(mod))
+        if isinstance(mod, _EventSource):
+            print("ES: Mod {} is an eventsource".format(mod.name))
+            sources.append(mod)
+        return sources
+
+    def gather_event_managers(self, module, depth=0, seen_modules=set()):
+        for k,v in module._submodules:
+            print("{}Submodule {} {}".format(" "*(depth*4), k, "xx"))
+            if v not in seen_modules:
+                seen_modules.add(v)
+                if isinstance(v, EventManager):
+                    print("{} appears to be an EventManager".format(k))
+                    sources_u = [y for x, y in xdir(v, True) if isinstance(y, _EventSource)]
+                    sources = sorted(sources_u, key=lambda x: x.duid)
+                    for source in sources:
+                        print("EV has a source: {}".format(source.name))
+                    
+                self.gather_event_managers(v, depth + 1, seen_modules)
+
+    def document_interrupt(self, soc, module_name, irq):
+        print("")
+        # Connect interrupts
+        if not hasattr(soc, "cpu"):
+            raise ValueError("Module has no CPU attribute")
+        if not hasattr(soc.cpu, "interrupt"):
+            raise ValueError("CPU has no interrupt module")
+        if not hasattr(soc, module_name):
+            raise ValueError("SOC has no module {}".format(module_name))
+        module = getattr(soc, module_name)
+        print("Module {} has an ev: {}".format(module_name, module.ev))
+
+        # sources_u = [v for k, v in xdir(module.ev, True) if isinstance(v, _EventSource)]
+        # sources = sorted(sources_u, key=lambda x: x.duid)
+        # print("Sources: {}".format(sources))
+        # for s in sources:
+        #     print("Event source {} {}".format(s.name, s))
+        #     print(dir(s))
+
+        sources_u = self.gather_sources(module.ev)
+        for k,v in xdir(module.ev, True):
+            sources_u += self.gather_sources(v)
+        self.gather_event_managers(module)
+        sources = sorted(sources_u, key=lambda x: x.duid)
+        print("Sources: {}".format(sources))
+        for s in sources:
+            print("source {}".format(s))
+            print(dir(s))
+        print("")
 
     def sub_csr_bit_range(self, csr, offset):
         nwords = (csr.size + self.busword - 1)//self.busword
@@ -289,10 +351,17 @@ class DocumentedCSRRegion:
 
 
 def generate_docs(soc, base_dir):
+    interrupts = {}
+    for csr, irq in sorted(soc.soc_interrupt_map.items()):
+        interrupts[csr] = irq
+
     documented_regions = []
     regions = soc.get_csr_regions()
     for csr_region in regions:
-        documented_regions.append(DocumentedCSRRegion(csr_region))
+        documented_region = DocumentedCSRRegion(csr_region)
+        if documented_region.name in interrupts:
+            documented_region.document_interrupt(soc, documented_region.name, interrupts[documented_region.name])
+        documented_regions.append(documented_region)
 
     with open(base_dir + "index.rst", "w", encoding="utf-8") as index:
         print(""".. foboot documentation master file, created by
