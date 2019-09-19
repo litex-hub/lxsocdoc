@@ -308,7 +308,6 @@ def print_svd_register(csr, csr_address, description, svd):
 def generate_svd(soc, buildpath, vendor="litex", name="soc"):
     interrupts = {}
     for csr, irq in sorted(soc.soc_interrupt_map.items()):
-        print("Setting interrupts[{}] = {}".format(csr, irq))
         interrupts[csr] = irq
 
     regions = soc.get_csr_regions()
