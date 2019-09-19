@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-# This variable defines all the external programs that this module
-# relies on.  lxbuildenv reads this variable in order to ensure
-# the build will finish without exiting due to missing third-party
-# programs.
-LX_DEPENDENCIES = ["riscv", "icestorm", "nextpnr-ice40"]
-
-# Import lxbuildenv to integrate the deps/ directory
-import lxbuildenv
 
 # Disable pylint's E1101, which breaks completely on migen
 #pylint:disable=E1101
@@ -38,6 +30,14 @@ class DocumentedCSR:
             f.description = DocumentedCSR.trim(f.description)
 
 class DocumentedCSRRegion:
+    def __init__(self, csr_region):
+        (self.name, self.origin, self.busword, self.raw_csrs) = csr_region
+        self.current_address = self.origin
+        self.csrs = []
+
+        for csr in self.raw_csrs:
+            self.document_csr(csr)
+
     def sub_csr_bit_range(self, csr, offset):
         nwords = (csr.size + self.busword - 1)//self.busword
         i = nwords - offset - 1
@@ -52,28 +52,28 @@ class DocumentedCSRRegion:
         """
         return fields
 
-    def print_reg(self, reg):
-        print("")
-        print("    .. wavedrom::")
-        print("        :caption: {}".format(reg.name))
-        print("")
-        print("        {")
-        print("            \"reg\": [")
+    def print_reg(self, reg, stream):
+        print("", file=stream)
+        print("    .. wavedrom::", file=stream)
+        print("        :caption: {}".format(reg.name), file=stream)
+        print("", file=stream)
+        print("        {", file=stream)
+        print("            \"reg\": [", file=stream)
         if len(reg.fields) > 0:
             bit_offset = 0
             for field in reg.fields:
                 term=","
                 if bit_offset + field.size == self.busword:
                     term=""
-                print("                {\"name\": \"" + field.name + "\",  \"bits\": " + str(field.size) + "}" + term)
+                print("                {\"name\": \"" + field.name + "\",  \"bits\": " + str(field.size) + "}" + term, file=stream)
             bit_offset += field.size
             if bit_offset != self.busword:
-                print("                {\"bits\": " + str(self.busword - bit_offset) + "}")
+                print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
         else:
-            print("                {\"name\": \"" + reg.short_name + "[" + str(reg.offset + reg.size - 1) + ":" + str(reg.offset) + "]\",  \"bits\": " + str(reg.size) + "}")
-        print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}")
-        print("        }")
-        print("")
+            print("                {\"name\": \"" + reg.short_name + "[" + str(reg.offset + reg.size - 1) + ":" + str(reg.offset) + "]\",  \"bits\": " + str(reg.size) + "}", file=stream)
+        print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}", file=stream)
+        print("        }", file=stream)
+        print("", file=stream)
 
     def document_csr(self, csr):
         """Generates one or more DocumentedCSR, which will get appended
@@ -130,48 +130,69 @@ class DocumentedCSRRegion:
             ))
             self.current_address += 4
 
-    def __init__(self, csr_region):
-        (self.name, self.origin, self.busword, self.raw_csrs) = csr_region
-        self.current_address = self.origin
-        self.csrs = []
-
-        for csr in self.raw_csrs:
-            self.document_csr(csr)
-            # if isinstance(o, _CompoundCSR) and len(o.simple_csrs) > 1:
-            #     for sc in o.simple_csrs:
-            #         print("    {} / {} - {}".format(sc.name, sc.size, sc))
-            # else:
-            #     print("    {} / {}: {} - {}".format(o.name, o.size, o.description, o))
-            #     if hasattr(o, "fields"):
-            #         for f in o.fields.fields:
-            #             print("        [{}:{}]: {}    {}".format(f.offset, f.offset + f.size, f.name.upper(), f.description))
+    def print_region(self, stream):
         for csr in self.csrs:
-            print("{}".format(csr.name))
-            print("^" * len(csr.name))
-            print("")
-            print("**Address: 0x{:08x} + 0x{:x} = 0x{:08x}**".format(self.origin, csr.address - self.origin, csr.address))
-            print("")
+            print("{}".format(csr.name), file=stream)
+            print("^" * len(csr.name), file=stream)
+            print("", file=stream)
+            print("**Address: 0x{:08x} + 0x{:x} = 0x{:08x}**".format(self.origin, csr.address - self.origin, csr.address), file=stream)
+            print("", file=stream)
             if csr.description is not None:
-                print("    {}".format(csr.description))
-            self.print_reg(csr)
+                print("    {}".format(csr.description), file=stream)
+            self.print_reg(csr, stream)
             if len(csr.fields) > 0:
-                print("")
-                print("    .. list-table:: {}: Field descriptions".format(csr.name))
-                print("        :widths: 15 10 100")
-                print("        :header-rows: 1")
-                print("")
-                print("        * - Field")
-                print("          - Name")
-                print("          - Description")
+                print("", file=stream)
+                print("    .. list-table:: {}: Field descriptions".format(csr.name), file=stream)
+                print("        :widths: 15 10 100", file=stream)
+                print("        :header-rows: 1", file=stream)
+                print("", file=stream)
+                print("        * - Field", file=stream)
+                print("          - Name", file=stream)
+                print("          - Description", file=stream)
                 for f in csr.fields:
-                    print("        * - [{}:{}]".format(f.offset + f.size, f.offset))
-                    print("          - {}".format(f.name.upper()))
-                    print("          - {}".format(f.description))
-            print("")
+                    print("        * - [{}:{}]".format(f.offset + f.size, f.offset), file=stream)
+                    print("          - {}".format(f.name.upper()), file=stream)
+                    print("          - {}".format(f.description), file=stream)
+            print("", file=stream)
 
 
-def generate_docs(soc):
-    docs = []
+def generate_docs(soc, base_dir):
+    documented_regions = []
     regions = soc.get_csr_regions()
     for csr_region in regions:
-        docs.append(DocumentedCSRRegion(csr_region))
+        documented_regions.append(DocumentedCSRRegion(csr_region))
+
+    with open(base_dir + "index.rst", "w", encoding="utf-8") as index:
+        print(""".. foboot documentation master file, created by
+   sphinx-quickstart on Thu Sep 19 09:37:13 2019.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to foboot's documentation!
+==================================
+
+.. toctree::
+    :hidden:
+""", file=index)
+        for region in documented_regions:
+            print("    {}".format(region.name), file=index)
+
+        print("""
+Register Groups
+===============
+""", file=index)
+        for region in documented_regions:
+            print("* :doc:`{} <{}>`".format(region.name.upper(), region.name), file=index)
+
+        print("""
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+""", file=index)
+
+    for region in documented_regions:
+        with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
+            region.print_region(outfile)
