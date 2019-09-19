@@ -78,21 +78,23 @@ class DocumentedCSRRegion:
         return sources
 
     def gather_event_managers(self, module, depth=0, seen_modules=set()):
+        event_managers = []
         for k,v in module._submodules:
-            print("{}Submodule {} {}".format(" "*(depth*4), k, "xx"))
+            # print("{}Submodule {} {}".format(" "*(depth*4), k, "xx"))
             if v not in seen_modules:
                 seen_modules.add(v)
                 if isinstance(v, EventManager):
-                    print("{} appears to be an EventManager".format(k))
-                    sources_u = [y for x, y in xdir(v, True) if isinstance(y, _EventSource)]
-                    sources = sorted(sources_u, key=lambda x: x.duid)
-                    for source in sources:
-                        print("EV has a source: {}".format(source.name))
+                    # print("{} appears to be an EventManager".format(k))
+                    event_managers.append(v)
+                    # sources_u = [y for x, y in xdir(v, True) if isinstance(y, _EventSource)]
+                    # sources = sorted(sources_u, key=lambda x: x.duid)
+                    # for source in sources:
+                    #     print("EV has a source: {}".format(source.name))
                     
-                self.gather_event_managers(v, depth + 1, seen_modules)
+                event_managers += self.gather_event_managers(v, depth + 1, seen_modules)
+        return event_managers
 
     def document_interrupt(self, soc, module_name, irq):
-        print("")
         # Connect interrupts
         if not hasattr(soc, "cpu"):
             raise ValueError("Module has no CPU attribute")
@@ -101,25 +103,42 @@ class DocumentedCSRRegion:
         if not hasattr(soc, module_name):
             raise ValueError("SOC has no module {}".format(module_name))
         module = getattr(soc, module_name)
-        print("Module {} has an ev: {}".format(module_name, module.ev))
 
-        # sources_u = [v for k, v in xdir(module.ev, True) if isinstance(v, _EventSource)]
-        # sources = sorted(sources_u, key=lambda x: x.duid)
-        # print("Sources: {}".format(sources))
-        # for s in sources:
-        #     print("Event source {} {}".format(s.name, s))
-        #     print(dir(s))
+        managers = self.gather_event_managers(module)
+        for m in managers:
+            sources_u = [y for x, y in xdir(m, True) if isinstance(y, _EventSource)]
+            sources = sorted(sources_u, key=lambda x: x.duid)
+            source_names = []
+            for source in sources:
+                source_names.append(source.name)
 
-        sources_u = self.gather_sources(module.ev)
-        for k,v in xdir(module.ev, True):
-            sources_u += self.gather_sources(v)
-        self.gather_event_managers(module)
-        sources = sorted(sources_u, key=lambda x: x.duid)
-        print("Sources: {}".format(sources))
-        for s in sources:
-            print("source {}".format(s))
-            print(dir(s))
-        print("")
+            # Patch the DocumentedCSR to add our own Description, if one doesn't exist.
+            for dcsr in self.csrs:
+                short_name = dcsr.short_name.upper()
+                if short_name == m.status.name.upper():
+                    if dcsr.fields is not None:
+                        fields = []
+                        for i, source_name in enumerate(source_names):
+                            fields.append(DocumentedCSRField(CSRField(source_name, offset=i, description="Level of the `{}` event".format(source_name))))
+                        dcsr.fields = fields
+                    if dcsr.description is not None:
+                        dcsr.description = "This register contains the current Level of the Event trigger.  Depending on the Event type, this may or may not trigger an interrupt.  Writes to this register have no effect."
+                elif short_name == m.pending.name.upper():
+                    if dcsr.fields is not None:
+                        fields = []
+                        for i, source_name in enumerate(source_names):
+                            fields.append(DocumentedCSRField(CSRField(source_name, offset=i, description="`1` if a `{}` event occurred".format(source_name))))
+                        dcsr.fields = fields
+                    if dcsr.description is not None:
+                        dcsr.description = "When an Event occurs, the corresponding bit will be set in this register.  To clear the Event, set the corresponding bit in this register."
+                elif short_name == m.enable.name.upper():
+                    if dcsr.fields is not None:
+                        fields = []
+                        for i, source_name in enumerate(source_names):
+                            fields.append(DocumentedCSRField(CSRField(source_name, offset=i, description="Write a `1` to enable the {} Event".format(source_name))))
+                        dcsr.fields = fields
+                    if dcsr.description is not None:
+                        dcsr.description = "This register enables the corresponding Events."
 
     def sub_csr_bit_range(self, csr, offset):
         nwords = (csr.size + self.busword - 1)//self.busword
