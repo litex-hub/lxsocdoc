@@ -9,7 +9,28 @@ from litex.soc.integration import SoCCore
 from litex.soc.integration.soc_core import csr_map_update
 from litex.soc.integration.builder import Builder
 from litex.soc.interconnect import wishbone
-from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage
+from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField
+
+def bit_range(start, end):
+    end -= 1
+    if start == end:
+        return "[{}]".format(start)
+    else:
+        return "[{}:{}]".format(end, start)
+
+class DocumentedCSRField:
+    def __init__(self, field):
+        self.name        = field.name
+        self.size        = field.size
+        self.offset      = field.offset
+        self.reset_value = field.reset
+        self.description = field.description
+        self.access      = field.access
+        self.pulse       = field.pulse
+        self.values      = field.values
+
+        # If this is part of a sub-CSR, this value will be different
+        self.start       = None
 
 class DocumentedCSR:
     def trim(docstring):
@@ -49,8 +70,33 @@ class DocumentedCSRRegion:
     def split_fields(self, fields, start, end):
         """Split `fields` into a sub-list that only contains the fields
         between `start` and `end`.
+        This means that sometimes registers will get truncated.  For example,
+        if we're going from [8:15] and we have a register that spans [7:15],
+        the bottom bit will be cut off.  To account for this, we set the `.start`
+        property of the resulting split field to `1`, the `.offset` to `0`, and the
+        `.size` to 7.
         """
-        return fields
+        split_f = []
+        for field in fields:
+            if field.offset > end:
+                continue
+            if field.offset + field.size < start:
+                continue
+            new_field = DocumentedCSRField(field)
+
+            new_field.offset -= start
+            if new_field.offset < 0:
+                underflow_amount = -new_field.offset
+                new_field.offset = 0
+                new_field.size  -= underflow_amount
+                new_field.start  = underflow_amount
+            # If it extends past the range, clamp the size to the range
+            if new_field.offset + new_field.size > (end - start):
+                new_field.size = (end - start) - new_field.offset + 1
+                if new_field.start is None:
+                    new_field.start = 0
+            split_f.append(new_field)
+        return split_f
 
     def print_reg(self, reg, stream):
         print("", file=stream)
@@ -62,12 +108,15 @@ class DocumentedCSRRegion:
         if len(reg.fields) > 0:
             bit_offset = 0
             for field in reg.fields:
+                field_name = field.name
+                if hasattr(field, "start") and field.start is not None:
+                    field_name = "{}{}".format(field.name, bit_range(field.start, field.size + field.start))
                 term=","
                 if bit_offset != field.offset:
                     print("                {\"bits\": " + str(field.offset - bit_offset) + "},", file=stream)
                 if field.offset + field.size == self.busword:
                     term=""
-                print("                {\"name\": \"" + field.name + "\",  \"bits\": " + str(field.size) + "}" + term, file=stream)
+                print("                {\"name\": \"" + field_name + "\",  \"bits\": " + str(field.size) + "}" + term, file=stream)
                 bit_offset = field.offset + field.size
             if bit_offset != self.busword:
                 print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
@@ -188,11 +237,14 @@ class DocumentedCSRRegion:
                 value_tables = {}
 
                 for f in csr.fields:
-                    if f.size == 1:
-                        max_field_width = max(max_field_width, len("[{}]".format(f.offset)))
-                    else:
-                        max_field_width = max(max_field_width, len("[{}:{}]".format(f.offset + f.size - 1, f.offset)))
-                    max_name_width = max(max_name_width, len(f.name))
+                    field = bit_range(f.offset, f.offset + f.size)
+                    max_field_width = max(max_field_width, len(field))
+
+                    name = f.name
+                    if hasattr(f, "start") and f.start is not None:
+                        name = "{}{}".format(f.name, bit_range(f.start, f.size + f.start))
+                    max_name_width = max(max_name_width, len(name))
+
                     for d in f.description.splitlines():
                         max_description_width = max(max_description_width, len(d))
                     if f.values is not None:
@@ -204,11 +256,13 @@ class DocumentedCSRRegion:
                 print("| " + "Field".ljust(max_field_width) + " | " + "Name".ljust(max_name_width) + " | " + "Description".ljust(max_description_width) + " |", file=stream)
                 print("+=" + "="*max_field_width + "=+=" + "="*max_name_width + "=+=" + "="*max_description_width + "=+", file=stream)
                 for f in csr.fields:
-                    if f.size == 1:
-                        field = "[{}]".format(f.offset).ljust(max_field_width)
-                    else:
-                        field = "[{}:{}]".format(f.offset + f.size - 1, f.offset).ljust(max_field_width)
-                    name = f.name.upper().ljust(max_name_width)
+                    field = bit_range(f.offset, f.offset + f.size).ljust(max_field_width)
+
+                    name = f.name.upper()
+                    if hasattr(f, "start") and f.start is not None:
+                        name = "{}{}".format(f.name.upper(), bit_range(f.start, f.size + f.start))
+                    name = name.ljust(max_name_width)
+
                     description = f.description
                     if f.name in value_tables:
                         description += "\n" + value_tables[f.name]
