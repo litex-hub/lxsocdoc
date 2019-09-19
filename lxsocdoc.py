@@ -205,7 +205,7 @@ class DocumentedCSRRegion:
             term=""
             if reg.size != 8:
                 term=","
-            print("                {\"name\": \"" + reg.short_name + "[" + str(reg.offset + reg.size - 1) + ":" + str(reg.offset) + "]\",  \"bits\": " + str(reg.size) + "}" + term, file=stream)
+            print("                {\"name\": \"" + reg.short_name.lower() + bit_range(reg.offset, reg.offset + reg.size) + "\",  \"bits\": " + str(reg.size) + "}" + term, file=stream)
             if reg.size != 8:
                 print("                {\"bits\": " + str(8 - reg.size) + "},", file=stream)
         print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}", file=stream)
