@@ -271,12 +271,24 @@ def sub_csr_bit_range(busword, csr, offset):
     origin = i*busword
     return (origin, nbits, name)
 
+def get_reset_value(csr):
+    reset = 0
+    if hasattr(csr, "fields"):
+        for f in csr.fields.fields:
+            reset = reset | (f.reset_value << f.offset)
+    elif hasattr(csr, "storage"):
+        reset = int(csr.storage.reset.value)
+    elif hasattr(csr, "status"):
+        reset = int(csr.status.reset.value)
+    return reset
+
 def print_svd_register(csr, csr_address, description, svd):
     print('                <register>', file=svd)
     print('                    <name>{}</name>'.format(csr.name), file=svd)
     if description is not None:
         print('                    <description>{}</description>'.format(description), file=svd)
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
+    print('                    <resetValue>0x{:02x}</resetValue>'.format(get_reset_value(csr)), file=svd)
     csr_address = csr_address + 4
     if hasattr(csr, "fields"):
         print('                    <fields>', file=svd)
@@ -286,7 +298,6 @@ def print_svd_register(csr, csr_address, description, svd):
             print('                            <msb>{}</msb>'.format(field.offset + field.size - 1), file=svd)
             print('                            <bitRange>[{}:{}]</bitRange>'.format(field.offset + field.size - 1, field.offset), file=svd)
             print('                            <lsb>{}</lsb>'.format(field.offset), file=svd)
-            print('                            <resetValue>{}</resetValue>'.format(field.reset.value), file=svd)
             print('                            <description>{}</description>'.format(field.description), file=svd)
             print('                        </field>', file=svd)
         print('                    </fields>', file=svd)
