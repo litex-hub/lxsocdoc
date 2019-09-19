@@ -40,6 +40,7 @@ class DocumentedCSR:
         if docstring is not None:
             import textwrap
             return textwrap.dedent(docstring).replace("\n", " ")
+        return None
         
     def __init__(self, name, address, short_name="", reset=0, offset=0, size=8, description=None, fields=[]):
         self.name = name
@@ -126,29 +127,29 @@ class DocumentedCSRRegion:
             for dcsr in self.csrs:
                 short_name = dcsr.short_name.upper()
                 if short_name == m.status.name.upper():
-                    if dcsr.fields is not None:
+                    if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
                             fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Level of the `{}` event".format(source.name))))
                         dcsr.fields = fields
-                    if dcsr.description is not None:
-                        dcsr.description = "This register contains the current Level of the Event trigger.  Depending on the Event type, this may or may not trigger an interrupt.  Writes to this register have no effect."
+                    if dcsr.description is None:
+                        dcsr.description = "This register contains the current raw level of the Event trigger.  Writes to this register have no effect."
                 elif short_name == m.pending.name.upper():
-                    if dcsr.fields is not None:
+                    if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
                             fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description=source_description(source))))
                         dcsr.fields = fields
-                    if dcsr.description is not None:
+                    if dcsr.description is None:
                         dcsr.description = "When an Event occurs, the corresponding bit will be set in this register.  To clear the Event, set the corresponding bit in this register."
                 elif short_name == m.enable.name.upper():
-                    if dcsr.fields is not None:
+                    if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
                             fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the `{}` Event".format(source.name))))
                         dcsr.fields = fields
-                    if dcsr.description is not None:
-                        dcsr.description = "This register enables the corresponding Events."
+                    if dcsr.description is None:
+                        dcsr.description = "This register enables the corresponding Events.  Write a `0` to this register to disable individual events."
 
     def sub_csr_bit_range(self, csr, offset):
         nwords = (csr.size + self.busword - 1)//self.busword
