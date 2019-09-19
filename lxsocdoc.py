@@ -304,6 +304,10 @@ def print_svd_register(csr, csr_address, description, svd):
     print('                </register>', file=svd)
 
 def generate_svd(soc, buildpath, vendor="litex", name="soc"):
+    interrupts = {}
+    for csr, irq in sorted(soc.soc_interrupt_map.items()):
+        print("Setting interrupts[{}] = {}".format(csr, irq))
+        interrupts[csr] = irq
 
     regions = soc.get_csr_regions()
     with open(buildpath + "/" + name + ".svd", "w", encoding="utf-8") as svd:
@@ -323,22 +327,22 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
         print('    <peripherals>', file=svd)
 
         for region in regions:
-            (name, origin, busword, csrs) = region
+            (region_name, region_origin, region_busword, region_csrs) = region
             csr_address = 0
             print('        <peripheral>', file=svd)
-            print('            <name>{}</name>'.format(name.upper()), file=svd)
-            print('            <baseAddress>0x{:08X}</baseAddress>'.format(origin), file=svd)
-            print('            <groupName>{}</groupName>'.format(name.upper()), file=svd)
+            print('            <name>{}</name>'.format(region_name.upper()), file=svd)
+            print('            <baseAddress>0x{:08X}</baseAddress>'.format(region_origin), file=svd)
+            print('            <groupName>{}</groupName>'.format(region_name.upper()), file=svd)
             print('            <description></description>', file=svd)
             print('            <registers>', file=svd)
-            for csr in csrs:
+            for csr in region_csrs:
                 description = None
                 if hasattr(csr, "description"):
                     description = csr.description
                 if isinstance(csr, _CompoundCSR) and len(csr.simple_csrs) > 1:
                     is_first = True
                     for i in range(len(csr.simple_csrs)):
-                        (start, length, name) = sub_csr_bit_range(busword, csr, i)
+                        (start, length, name) = sub_csr_bit_range(region_busword, csr, i)
                         sub_name = csr.name.upper() + "_" + name
                         bits_str = "Bits {}-{} of `{}`.".format(start, start+length, csr.name)
                         if is_first:
@@ -359,6 +363,11 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
             print('                <size>0x{:x}</size>'.format(csr_address), file=svd)
             print('                <usage>registers</usage>', file=svd)
             print('            </addressBlock>', file=svd)
+            if region_name in interrupts:
+                print('            <interrupt>', file=svd)
+                print('                <name>{}</name>'.format(region_name), file=svd)
+                print('                <value>{}</value>'.format(interrupts[region_name]), file=svd)
+                print('            </interrupt>', file=svd)
             print('        </peripheral>', file=svd)
         print('    </peripherals>', file=svd)
         print('</device>', file=svd)
