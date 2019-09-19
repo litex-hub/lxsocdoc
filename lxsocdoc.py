@@ -63,10 +63,12 @@ class DocumentedCSRRegion:
             bit_offset = 0
             for field in reg.fields:
                 term=","
-                if bit_offset + field.size == self.busword:
+                if bit_offset != field.offset:
+                    print("                {\"bits\": " + str(field.offset - bit_offset) + "},", file=stream)
+                if field.offset + field.size == self.busword:
                     term=""
                 print("                {\"name\": \"" + field.name + "\",  \"bits\": " + str(field.size) + "}" + term, file=stream)
-            bit_offset += field.size
+                bit_offset = field.offset + field.size
             if bit_offset != self.busword:
                 print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
         else:
