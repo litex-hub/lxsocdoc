@@ -202,7 +202,12 @@ class DocumentedCSRRegion:
             if bit_offset != self.busword:
                 print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
         else:
-            print("                {\"name\": \"" + reg.short_name + "[" + str(reg.offset + reg.size - 1) + ":" + str(reg.offset) + "]\",  \"bits\": " + str(reg.size) + "}", file=stream)
+            term=""
+            if reg.size != 8:
+                term=","
+            print("                {\"name\": \"" + reg.short_name + "[" + str(reg.offset + reg.size - 1) + ":" + str(reg.offset) + "]\",  \"bits\": " + str(reg.size) + "}" + term, file=stream)
+            if reg.size != 8:
+                print("                {\"bits\": " + str(8 - reg.size) + "},", file=stream)
         print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}", file=stream)
         print("        }", file=stream)
         print("", file=stream)
@@ -217,6 +222,17 @@ class DocumentedCSRRegion:
         elif hasattr(csr, "status"):
             reset = int(csr.status.reset.value)
         return reset
+
+    def get_csr_size(self, csr):
+        nbits = 0
+        if hasattr(csr, "fields"):
+            for f in csr.fields.fields:
+                nbits = max(nbits, f.size + f.offset - 1)
+        elif hasattr(csr, "storage"):
+            nbits = int(csr.storage.nbits)
+        elif hasattr(csr, "status"):
+            nbits = int(csr.status.nbits)
+        return nbits
 
     def document_csr(self, csr):
         """Generates one or more DocumentedCSR, which will get appended
@@ -233,6 +249,7 @@ class DocumentedCSRRegion:
             description = csr.description
         if hasattr(csr, "atomic_write"):
             atomic_write = csr.atomic_write
+        size = self.get_csr_size(csr)
         reset = self.get_csr_reset(csr)
 
         # If the CSR is composed of multiple sub-CSRs, document each
@@ -267,7 +284,7 @@ class DocumentedCSRRegion:
                 self.current_address += 4
         else:
             self.csrs.append(DocumentedCSR(
-                full_name, self.current_address, short_name=csr.name.upper(), reset=reset,
+                full_name, self.current_address, short_name=csr.name.upper(), reset=reset, size=size,
                 description=description, fields=fields
             ))
             self.current_address += 4
