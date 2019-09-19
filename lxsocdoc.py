@@ -126,6 +126,17 @@ class DocumentedCSRRegion:
         print("        }", file=stream)
         print("", file=stream)
 
+    def get_csr_reset(self, csr):
+        reset = 0
+        if hasattr(csr, "fields"):
+            for f in csr.fields.fields:
+                reset = reset | (f.reset_value << f.offset)
+        elif hasattr(csr, "storage"):
+            reset = int(csr.storage.reset.value)
+        elif hasattr(csr, "status"):
+            reset = int(csr.status.reset.value)
+        return reset
+
     def document_csr(self, csr):
         """Generates one or more DocumentedCSR, which will get appended
         to self.csrs"""
@@ -141,8 +152,7 @@ class DocumentedCSRRegion:
             description = csr.description
         if hasattr(csr, "atomic_write"):
             atomic_write = csr.atomic_write
-        if hasattr(csr, "reset"):
-            reset = csr.reset
+        reset = self.get_csr_reset(csr)
 
         # If the CSR is composed of multiple sub-CSRs, document each
         # one individually.
@@ -327,28 +337,17 @@ def sub_csr_bit_range(busword, csr, offset):
     origin = i*busword
     return (origin, nbits, name)
 
-def get_reset_value(csr):
-    reset = 0
-    if hasattr(csr, "fields"):
-        for f in csr.fields.fields:
-            reset = reset | (f.reset_value << f.offset)
-    elif hasattr(csr, "storage"):
-        reset = int(csr.storage.reset.value)
-    elif hasattr(csr, "status"):
-        reset = int(csr.status.reset.value)
-    return reset
-
 def print_svd_register(csr, csr_address, description, svd):
     print('                <register>', file=svd)
     print('                    <name>{}</name>'.format(csr.name), file=svd)
     if description is not None:
         print('                    <description>{}</description>'.format(description), file=svd)
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
-    print('                    <resetValue>0x{:02x}</resetValue>'.format(get_reset_value(csr)), file=svd)
+    print('                    <resetValue>0x{:02x}</resetValue>'.format(csr.reset), file=svd)
     csr_address = csr_address + 4
     if hasattr(csr, "fields"):
         print('                    <fields>', file=svd)
-        for field in csr.fields.fields:
+        for field in csr.fields:
             print('                        <field>', file=svd)
             print('                            <name>{}</name>'.format(field.name), file=svd)
             print('                            <msb>{}</msb>'.format(field.offset + field.size - 1), file=svd)
@@ -364,7 +363,11 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
     for csr, irq in sorted(soc.soc_interrupt_map.items()):
         interrupts[csr] = irq
 
+    documented_regions = []
     regions = soc.get_csr_regions()
+    for csr_region in regions:
+        documented_regions.append(DocumentedCSRRegion(csr_region))
+
     with open(buildpath + "/" + name + ".svd", "w", encoding="utf-8") as svd:
         print('<?xml version="1.0" encoding="utf-8"?>', file=svd)
         print('', file=svd)
@@ -381,16 +384,15 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
         print('', file=svd)
         print('    <peripherals>', file=svd)
 
-        for region in regions:
-            (region_name, region_origin, region_busword, region_csrs) = region
+        for region in documented_regions:
             csr_address = 0
             print('        <peripheral>', file=svd)
-            print('            <name>{}</name>'.format(region_name.upper()), file=svd)
-            print('            <baseAddress>0x{:08X}</baseAddress>'.format(region_origin), file=svd)
-            print('            <groupName>{}</groupName>'.format(region_name.upper()), file=svd)
+            print('            <name>{}</name>'.format(region.name.upper()), file=svd)
+            print('            <baseAddress>0x{:08X}</baseAddress>'.format(region.origin), file=svd)
+            print('            <groupName>{}</groupName>'.format(region.name.upper()), file=svd)
             print('            <description></description>', file=svd)
             print('            <registers>', file=svd)
-            for csr in region_csrs:
+            for csr in region.csrs:
                 description = None
                 if hasattr(csr, "description"):
                     description = csr.description
@@ -418,10 +420,10 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
             print('                <size>0x{:x}</size>'.format(csr_address), file=svd)
             print('                <usage>registers</usage>', file=svd)
             print('            </addressBlock>', file=svd)
-            if region_name in interrupts:
+            if region.name in interrupts:
                 print('            <interrupt>', file=svd)
-                print('                <name>{}</name>'.format(region_name), file=svd)
-                print('                <value>{}</value>'.format(interrupts[region_name]), file=svd)
+                print('                <name>{}</name>'.format(region.name), file=svd)
+                print('                <value>{}</value>'.format(interrupts[region.name]), file=svd)
                 print('            </interrupt>', file=svd)
             print('        </peripheral>', file=svd)
         print('    </peripherals>', file=svd)
