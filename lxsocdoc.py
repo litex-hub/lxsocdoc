@@ -114,11 +114,11 @@ class DocumentedCSRRegion:
                 if src.description is not None:
                     return src.description
                 elif isinstance(src, EventSourceLevel):
-                    return base_text + "This Event is **level triggered** when the signal is **high**"
+                    return base_text + "This Event is **level triggered** when the signal is **high**."
                 elif isinstance(src, EventSourcePulse):
-                    return base_text + "This Event is triggered on a **rising** edge"
+                    return base_text + "This Event is triggered on a **rising** edge."
                 elif isinstance(src, EventSourceProcess):
-                    return base_text + "This Event is triggered on a **falling** edge"
+                    return base_text + "This Event is triggered on a **falling** edge."
                 else:
                     return base_text + "This Event uses an unknown method of triggering."
 
@@ -145,7 +145,7 @@ class DocumentedCSRRegion:
                     if dcsr.fields is not None:
                         fields = []
                         for i, source in enumerate(sources):
-                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the {} Event".format(source.name))))
+                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the `{}` Event".format(source.name))))
                         dcsr.fields = fields
                     if dcsr.description is not None:
                         dcsr.description = "This register enables the corresponding Events."
