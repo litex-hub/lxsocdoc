@@ -186,7 +186,10 @@ class DocumentedCSRRegion:
                 value_tables = {}
 
                 for f in csr.fields:
-                    max_field_width = max(max_field_width, len("[{}:{}]".format(f.offset + f.size, f.offset)))
+                    if f.size == 1:
+                        max_field_width = max(max_field_width, len("[{}]".format(f.offset)))
+                    else:
+                        max_field_width = max(max_field_width, len("[{}:{}]".format(f.offset + f.size - 1, f.offset)))
                     max_name_width = max(max_name_width, len(f.name))
                     for d in f.description.splitlines():
                         max_description_width = max(max_description_width, len(d))
@@ -199,7 +202,10 @@ class DocumentedCSRRegion:
                 print("| " + "Field".ljust(max_field_width) + " | " + "Name".ljust(max_name_width) + " | " + "Description".ljust(max_description_width) + " |", file=stream)
                 print("+=" + "="*max_field_width + "=+=" + "="*max_name_width + "=+=" + "="*max_description_width + "=+", file=stream)
                 for f in csr.fields:
-                    field = "[{}:{}]".format(f.offset + f.size, f.offset).ljust(max_field_width)
+                    if f.size == 1:
+                        field = "[{}]".format(f.offset).ljust(max_field_width)
+                    else:
+                        field = "[{}:{}]".format(f.offset + f.size - 1, f.offset).ljust(max_field_width)
                     name = f.name.upper().ljust(max_name_width)
                     description = f.description
                     if f.name in value_tables:
@@ -256,3 +262,92 @@ Indices and tables
     for region in documented_regions:
         with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
             region.print_region(outfile)
+
+def sub_csr_bit_range(busword, csr, offset):
+    nwords = (csr.size + busword - 1)//busword
+    i = nwords - offset - 1
+    nbits = min(csr.size - i*busword, busword) - 1
+    name = (csr.name + str(i) if nwords > 1 else csr.name).upper()
+    origin = i*busword
+    return (origin, nbits, name)
+
+def print_svd_register(csr, csr_address, description, svd):
+    print('                <register>', file=svd)
+    print('                    <name>{}</name>'.format(csr.name), file=svd)
+    if description is not None:
+        print('                    <description>{}</description>'.format(description), file=svd)
+    print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
+    csr_address = csr_address + 4
+    if hasattr(csr, "fields"):
+        print('                    <fields>', file=svd)
+        for field in csr.fields.fields:
+            print('                        <field>', file=svd)
+            print('                            <name>{}</name>'.format(field.name), file=svd)
+            print('                            <msb>{}</msb>'.format(field.offset + field.size - 1), file=svd)
+            print('                            <bitRange>[{}:{}]</bitRange>'.format(field.offset + field.size - 1, field.offset), file=svd)
+            print('                            <lsb>{}</lsb>'.format(field.offset), file=svd)
+            print('                            <resetValue>{}</resetValue>'.format(field.reset.value), file=svd)
+            print('                            <description>{}</description>'.format(field.description), file=svd)
+            print('                        </field>', file=svd)
+        print('                    </fields>', file=svd)
+    print('                </register>', file=svd)
+
+def generate_svd(soc, buildpath, vendor="litex", name="soc"):
+
+    regions = soc.get_csr_regions()
+    with open(buildpath + "/" + name + ".svd", "w", encoding="utf-8") as svd:
+        print('<?xml version="1.0" encoding="utf-8"?>', file=svd)
+        print('', file=svd)
+        print('<device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd" >', file=svd)
+        print('    <vendor>{}</vendor>'.format(vendor), file=svd)
+        print('    <name>{}</name>'.format(name.upper()), file=svd)
+        print('', file=svd)
+        print('    <addressUnitBits>8</addressUnitBits>', file=svd)
+        print('    <width>32</width>', file=svd)
+        print('    <size>32</size>', file=svd)
+        print('    <access>read-write</access>', file=svd)
+        print('    <resetValue>0x00000000</resetValue>', file=svd)
+        print('    <resetMask>0xFFFFFFFF</resetMask>', file=svd)
+        print('', file=svd)
+        print('    <peripherals>', file=svd)
+
+        for region in regions:
+            (name, origin, busword, csrs) = region
+            csr_address = 0
+            print('        <peripheral>', file=svd)
+            print('            <name>{}</name>'.format(name.upper()), file=svd)
+            print('            <baseAddress>0x{:08X}</baseAddress>'.format(origin), file=svd)
+            print('            <groupName>{}</groupName>'.format(name.upper()), file=svd)
+            print('            <description></description>', file=svd)
+            print('            <registers>', file=svd)
+            for csr in csrs:
+                description = None
+                if hasattr(csr, "description"):
+                    description = csr.description
+                if isinstance(csr, _CompoundCSR) and len(csr.simple_csrs) > 1:
+                    is_first = True
+                    for i in range(len(csr.simple_csrs)):
+                        (start, length, name) = sub_csr_bit_range(busword, csr, i)
+                        sub_name = csr.name.upper() + "_" + name
+                        bits_str = "Bits {}-{} of `{}`.".format(start, start+length, csr.name)
+                        if is_first:
+                            if description is not None:
+                                print_svd_register(csr.simple_csrs[i], csr_address, bits_str + " " + description, svd)
+                            else:
+                                print_svd_register(csr.simple_csrs[i], csr_address, bits_str, svd)
+                            is_first = False
+                        else:
+                            print_svd_register(csr.simple_csrs[i], csr_address, bits_str, svd)
+                        csr_address = csr_address + 4
+                else:
+                    print_svd_register(csr, csr_address, description, svd)
+                    csr_address = csr_address + 4
+            print('            </registers>', file=svd)
+            print('            <addressBlock>', file=svd)
+            print('                <offset>0</offset>', file=svd)
+            print('                <size>0x{:x}</size>'.format(csr_address), file=svd)
+            print('                <usage>registers</usage>', file=svd)
+            print('            </addressBlock>', file=svd)
+            print('        </peripheral>', file=svd)
+        print('    </peripherals>', file=svd)
+        print('</device>', file=svd)
