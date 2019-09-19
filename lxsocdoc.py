@@ -12,7 +12,7 @@ from litex.soc.integration.soc_core import csr_map_update
 from litex.soc.integration.builder import Builder
 from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField
-from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager
+from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager, EventSourceLevel, EventSourceProcess, EventSourcePulse
 
 def bit_range(start, end):
     end -= 1
@@ -108,9 +108,19 @@ class DocumentedCSRRegion:
         for m in managers:
             sources_u = [y for x, y in xdir(m, True) if isinstance(y, _EventSource)]
             sources = sorted(sources_u, key=lambda x: x.duid)
-            source_names = []
-            for source in sources:
-                source_names.append(source.name)
+
+            def source_description(src):
+                base_text = "`1` if a `{}` event occurred. ".format(src.name)
+                if src.description is not None:
+                    return src.description
+                elif isinstance(src, EventSourceLevel):
+                    return base_text + "This Event is **level triggered** when the signal is **high**"
+                elif isinstance(src, EventSourcePulse):
+                    return base_text + "This Event is triggered on a **rising** edge"
+                elif isinstance(src, EventSourceProcess):
+                    return base_text + "This Event is triggered on a **falling** edge"
+                else:
+                    return base_text + "This Event uses an unknown method of triggering."
 
             # Patch the DocumentedCSR to add our own Description, if one doesn't exist.
             for dcsr in self.csrs:
@@ -118,24 +128,24 @@ class DocumentedCSRRegion:
                 if short_name == m.status.name.upper():
                     if dcsr.fields is not None:
                         fields = []
-                        for i, source_name in enumerate(source_names):
-                            fields.append(DocumentedCSRField(CSRField(source_name, offset=i, description="Level of the `{}` event".format(source_name))))
+                        for i, source in enumerate(sources):
+                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Level of the `{}` event".format(source.name))))
                         dcsr.fields = fields
                     if dcsr.description is not None:
                         dcsr.description = "This register contains the current Level of the Event trigger.  Depending on the Event type, this may or may not trigger an interrupt.  Writes to this register have no effect."
                 elif short_name == m.pending.name.upper():
                     if dcsr.fields is not None:
                         fields = []
-                        for i, source_name in enumerate(source_names):
-                            fields.append(DocumentedCSRField(CSRField(source_name, offset=i, description="`1` if a `{}` event occurred".format(source_name))))
+                        for i, source in enumerate(sources):
+                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description=source_description(source))))
                         dcsr.fields = fields
                     if dcsr.description is not None:
                         dcsr.description = "When an Event occurs, the corresponding bit will be set in this register.  To clear the Event, set the corresponding bit in this register."
                 elif short_name == m.enable.name.upper():
                     if dcsr.fields is not None:
                         fields = []
-                        for i, source_name in enumerate(source_names):
-                            fields.append(DocumentedCSRField(CSRField(source_name, offset=i, description="Write a `1` to enable the {} Event".format(source_name))))
+                        for i, source in enumerate(sources):
+                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the {} Event".format(source.name))))
                         dcsr.fields = fields
                     if dcsr.description is not None:
                         dcsr.description = "This register enables the corresponding Events."
