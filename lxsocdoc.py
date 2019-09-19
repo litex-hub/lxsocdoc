@@ -130,6 +130,45 @@ class DocumentedCSRRegion:
             ))
             self.current_address += 4
 
+    def make_value_table(self, values):
+        ret = ""
+        max_value_width=len("Value")
+        max_description_width=len("Description")
+        for v in values:
+            (value, name, description) = (None, None, None)
+            if len(v) == 2:
+                (value, description) = v
+            elif len(v) == 3:
+                (value, name, description) = v
+            else:
+                raise ValueError("Unexpected length of CSRField's value tuple")
+
+            max_value_width = max(max_value_width, len(value))
+            for d in description.splitlines():
+                max_description_width = max(max_description_width, len(d))
+        ret += "\n"
+        ret += "+-" + "-"*max_value_width + "-+-" + "-"*max_description_width + "-+\n"
+        ret += "| " + "Value".ljust(max_value_width) + " | " + "Description".ljust(max_description_width) + " |\n"
+        ret += "+=" + "="*max_value_width + "=+=" +  "="*max_description_width + "=+\n"
+        for v in values:
+            (value, name, description) = (None, None, None)
+            if len(v) == 2:
+                (value, description) = v
+            elif len(v) == 3:
+                (value, name, description) = v
+            else:
+                raise ValueError("Unexpected length of CSRField's value tuple")
+            value = value.ljust(max_value_width)
+            first_line = True
+            for d in description.splitlines():
+                if first_line:
+                    ret += "| {} | {} |\n".format(value, d.ljust(max_description_width))
+                    first_line = False
+                else:
+                    ret += "| {} | {} |\n".format(" ".ljust(max_value_width), d.ljust(max_description_width))
+            ret += "+-" + "-"*max_value_width + "-+-" + "-"*max_description_width + "-+\n"
+        return ret
+
     def print_region(self, stream):
         for csr in self.csrs:
             print("{}".format(csr.name), file=stream)
@@ -141,18 +180,39 @@ class DocumentedCSRRegion:
                 print("    {}".format(csr.description), file=stream)
             self.print_reg(csr, stream)
             if len(csr.fields) > 0:
-                print("", file=stream)
-                print("    .. list-table:: {}: Field descriptions".format(csr.name), file=stream)
-                print("        :widths: 15 10 100", file=stream)
-                print("        :header-rows: 1", file=stream)
-                print("", file=stream)
-                print("        * - Field", file=stream)
-                print("          - Name", file=stream)
-                print("          - Description", file=stream)
+                max_field_width=len("Field")
+                max_name_width=len("Name")
+                max_description_width=len("Description")
+                value_tables = {}
+
                 for f in csr.fields:
-                    print("        * - [{}:{}]".format(f.offset + f.size, f.offset), file=stream)
-                    print("          - {}".format(f.name.upper()), file=stream)
-                    print("          - {}".format(f.description), file=stream)
+                    max_field_width = max(max_field_width, len("[{}:{}]".format(f.offset + f.size, f.offset)))
+                    max_name_width = max(max_name_width, len(f.name))
+                    for d in f.description.splitlines():
+                        max_description_width = max(max_description_width, len(d))
+                    if f.values is not None:
+                        value_tables[f.name] = self.make_value_table(f.values)
+                        for d in value_tables[f.name].splitlines():
+                            max_description_width = max(max_description_width, len(d))
+                print("", file=stream)
+                print("+-" + "-"*max_field_width + "-+-" + "-"*max_name_width + "-+-" + "-"*max_description_width + "-+", file=stream)
+                print("| " + "Field".ljust(max_field_width) + " | " + "Name".ljust(max_name_width) + " | " + "Description".ljust(max_description_width) + " |", file=stream)
+                print("+=" + "="*max_field_width + "=+=" + "="*max_name_width + "=+=" + "="*max_description_width + "=+", file=stream)
+                for f in csr.fields:
+                    field = "[{}:{}]".format(f.offset + f.size, f.offset).ljust(max_field_width)
+                    name = f.name.upper().ljust(max_name_width)
+                    description = f.description
+                    if f.name in value_tables:
+                        description += "\n" + value_tables[f.name]
+
+                    first_line = True
+                    for d in description.splitlines():
+                        if first_line:
+                            print("| {} | {} | {} |".format(field, name, d.ljust(max_description_width)), file=stream)
+                            first_line = False
+                        else:
+                            print("| {} | {} | {} |".format(" ".ljust(max_field_width), " ".ljust(max_name_width), d.ljust(max_description_width)), file=stream)
+                    print("+-" + "-"*max_field_width + "-+-" + "-"*max_name_width + "-+-" + "-"*max_description_width + "-+", file=stream)
             print("", file=stream)
 
 
