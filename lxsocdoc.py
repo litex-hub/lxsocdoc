@@ -5,8 +5,10 @@
 
 from migen import *
 from migen.util.misc import xdir
+from migen.fhdl.specials import Memory
 
-from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField
+from litex.soc.interconnect.csr_bus import SRAM
+from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField, _CSRBase
 from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager, EventSourceLevel, EventSourceProcess, EventSourcePulse
 
 sphinx_configuration = """
@@ -71,8 +73,20 @@ class DocumentedCSRRegion:
         self.current_address = self.origin
         self.csrs = []
 
-        for csr in self.raw_csrs:
-            self.document_csr(csr)
+        if isinstance(self.raw_csrs, SRAM):
+            print("{}@{:x}: Found SRAM: {}".format(self.name, self.origin, self.raw_csrs))
+        elif isinstance(self.raw_csrs, list):
+            for csr in self.raw_csrs:
+                if isinstance(csr, _CSRBase):
+                    self.document_csr(csr)
+                elif isinstance(csr, SRAM):
+                    print("{}: Found SRAM in the list: {}".format(self.name, csr))
+                else:
+                    print("{}: Unknown module: {}".format(self.name, csr))
+        elif isinstance(self.raw_csrs, Memory):
+            print("{}@{:x}: Found memory that's {} x {} (but memories aren't documented yet)".format(self.name, self.origin, self.raw_csrs.width, self.raw_csrs.depth))
+        else:
+            print("{}@{:x}: Unexpected item on the CSR bus: {}".format(self.name, self.origin, self.raw_csrs))
 
     def gather_sources(self, mod):
         sources = []
