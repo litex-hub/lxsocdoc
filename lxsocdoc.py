@@ -27,9 +27,11 @@ html_theme = 'alabaster'
 html_static_path = ['_static']
 """
 
-def bit_range(start, end):
+def bit_range(start, end, empty_if_zero=False):
     end -= 1
     if start == end:
+        if empty_if_zero:
+            return ""
         return "[{}]".format(start)
     else:
         return "[{}:{}]".format(end, start)
@@ -227,7 +229,7 @@ class DocumentedCSRRegion:
             for field in reg.fields:
                 field_name = field.name
                 if hasattr(field, "start") and field.start is not None:
-                    field_name = "{}{}".format(field.name, bit_range(field.start, field.size + field.start))
+                    field_name = "{}{}".format(field.name, bit_range(field.start, field.size + field.start, empty_if_zero=True))
                 term=","
                 if bit_offset != field.offset:
                     print("                {\"bits\": " + str(field.offset - bit_offset) + "},", file=stream)
@@ -241,7 +243,7 @@ class DocumentedCSRRegion:
             term=""
             if reg.size != 8:
                 term=","
-            print("                {\"name\": \"" + reg.short_name.lower() + bit_range(reg.offset, reg.offset + reg.size) + "\",  \"bits\": " + str(reg.size) + "}" + term, file=stream)
+            print("                {\"name\": \"" + reg.short_name.lower() + bit_range(reg.offset, reg.offset + reg.size, empty_if_zero=True) + "\",  \"bits\": " + str(reg.size) + "}" + term, file=stream)
             if reg.size != 8:
                 print("                {\"bits\": " + str(8 - reg.size) + "},", file=stream)
         print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}", file=stream)
