@@ -6,11 +6,6 @@
 from migen import *
 from migen.util.misc import xdir
 
-from litex_boards.partner.targets.fomu import BaseSoC
-from litex.soc.integration import SoCCore
-from litex.soc.integration.soc_core import csr_map_update
-from litex.soc.integration.builder import Builder
-from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField
 from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager, EventSourceLevel, EventSourceProcess, EventSourcePulse
 
