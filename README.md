@@ -26,7 +26,7 @@ import lxsocdoc
     builder = Builder(soc)
     vns = builder.build()
     soc.do_exit(vns)
-    lxsocdoc.generate_docs(soc, "build/documentation/")
+    lxsocdoc.generate_docs(soc, "build/documentation")
     lxsocdoc.generate_svd(soc, "build/software")
 ```
 
@@ -40,4 +40,6 @@ For example, if `sphinx-build` is in your path, you can run:
 `sphinx-build` may be located in `~/.local/bin/` depending on your installation environment.
 
 You can then verify the contents by starting a local webserver and opening a web
-browser to [localhost:8000](http://localhost:8000).
+browser to [localhost:8000](http://localhost:8000):
+
+`python3 -m http.server --directory build/documentation/_build/html`
