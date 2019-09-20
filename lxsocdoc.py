@@ -14,14 +14,6 @@ project = '{}'
 copyright = '{}, {}'
 author = '{}'
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    'sphinx.ext.autosectionlabel',
-    'sphinx.ext.napoleon',
     'sphinxcontrib.wavedrom',
     {}
 ]
