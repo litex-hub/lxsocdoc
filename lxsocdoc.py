@@ -14,6 +14,30 @@ from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField
 from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager, EventSourceLevel, EventSourceProcess, EventSourcePulse
 
+sphinx_configuration = """
+project = '{}'
+copyright = '{}, {}'
+author = '{}'
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.todo',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.githubpages',
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.napoleon',
+    'sphinxcontrib.wavedrom',
+    {}
+]
+templates_path = ['_templates']
+exclude_patterns = []
+offline_skin_js_path = "https://wavedrom.com/skins/default.js"
+offline_wavedrom_js_path = "https://wavedrom.com/WaveDrom.js"
+html_theme = 'alabaster'
+html_static_path = ['_static']
+"""
+
 def bit_range(start, end):
     end -= 1
     if start == end:
@@ -396,55 +420,6 @@ class DocumentedCSRRegion:
                     print("+-" + "-"*max_field_width + "-+-" + "-"*max_name_width + "-+-" + "-"*max_description_width + "-+", file=stream)
             print("", file=stream)
 
-
-def generate_docs(soc, base_dir):
-    interrupts = {}
-    for csr, irq in sorted(soc.soc_interrupt_map.items()):
-        interrupts[csr] = irq
-
-    documented_regions = []
-    regions = soc.get_csr_regions()
-    for csr_region in regions:
-        documented_region = DocumentedCSRRegion(csr_region)
-        if documented_region.name in interrupts:
-            documented_region.document_interrupt(soc, documented_region.name, interrupts[documented_region.name])
-        documented_regions.append(documented_region)
-
-    with open(base_dir + "index.rst", "w", encoding="utf-8") as index:
-        print(""".. foboot documentation master file, created by
-   sphinx-quickstart on Thu Sep 19 09:37:13 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to foboot's documentation!
-==================================
-
-.. toctree::
-    :hidden:
-""", file=index)
-        for region in documented_regions:
-            print("    {}".format(region.name), file=index)
-
-        print("""
-Register Groups
-===============
-""", file=index)
-        for region in documented_regions:
-            print("* :doc:`{} <{}>`".format(region.name.upper(), region.name), file=index)
-
-        print("""
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-""", file=index)
-
-    for region in documented_regions:
-        with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
-            region.print_region(outfile)
-
 def sub_csr_bit_range(busword, csr, offset):
     nwords = (csr.size + busword - 1)//busword
     i = nwords - offset - 1
@@ -544,3 +519,78 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
             print('        </peripheral>', file=svd)
         print('    </peripherals>', file=svd)
         print('</device>', file=svd)
+
+def generate_docs(soc, base_dir, project_name="LiteX SoC Project", author="Anonymous", sphinx_extensions=[], quiet=False):
+    """Possible extra extensions:
+        [
+            'recommonmark',
+            'sphinx_rtd_theme',
+            'sphinx_autodoc_typehints',
+        ]
+    """
+
+    # Ensure the target directory is a full path
+    if base_dir[-1] != '/':
+        base_dir = base_dir + '/'
+
+    # Ensure the output directory exists
+    import pathlib
+    pathlib.Path(base_dir + "/_static").mkdir(parents=True, exist_ok=True)
+
+    # Create various Sphinx plumbing
+    with open(base_dir + "conf.py", "w", encoding="utf-8") as conf:
+        import datetime
+        year = datetime.datetime.now().year
+        print(sphinx_configuration.format(project_name, year, author, author, ",\n    ".join(sphinx_extensions)), file=conf)
+    if not quiet:
+        print("Generate the documentation by running `sphinx-build -M html {} {}_build`".format(base_dir, base_dir))
+
+    # Gather all interrupts so we can easily map IRQ numbers to CSR sections
+    interrupts = {}
+    for csr, irq in sorted(soc.soc_interrupt_map.items()):
+        interrupts[csr] = irq
+
+    # Convert each CSR region into a DocumentedCSRRegion.
+    # This process will also expand each CSR into a DocumentedCSR,
+    # which means that CompoundCSRs (such as CSRStorage and CSRStatus)
+    # that are larger than the buswidth will be turned into multiple
+    # DocumentedCSRs.
+    documented_regions = []
+    regions = soc.get_csr_regions()
+    for csr_region in regions:
+        documented_region = DocumentedCSRRegion(csr_region)
+        if documented_region.name in interrupts:
+            documented_region.document_interrupt(soc, documented_region.name, interrupts[documented_region.name])
+        documented_regions.append(documented_region)
+
+    with open(base_dir + "index.rst", "w", encoding="utf-8") as index:
+        print("""
+Documentation for {}
+{}
+
+.. toctree::
+    :hidden:
+""".format(project_name, "="*len("Documentation for " + project_name)), file=index)
+        for region in documented_regions:
+            print("    {}".format(region.name), file=index)
+
+        print("""
+Register Groups
+===============
+""", file=index)
+        for region in documented_regions:
+            print("* :doc:`{} <{}>`".format(region.name.upper(), region.name), file=index)
+
+        print("""
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+""", file=index)
+
+    # Create a Region file for each of the documented CSR regions.
+    for region in documented_regions:
+        with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
+            region.print_region(outfile)
