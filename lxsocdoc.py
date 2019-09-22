@@ -63,6 +63,8 @@ class DocumentedCSR:
         self.address = address
         self.offset = offset
         self.size = size
+        if size == 0:
+            print("!!! Warning: creating CSR of size 0 {}".format(name))
         self.description = DocumentedCSR.trim(description)
         self.reset = reset
         self.fields = fields
@@ -280,11 +282,17 @@ class DocumentedCSRRegion:
         nbits = 0
         if hasattr(csr, "fields"):
             for f in csr.fields.fields:
-                nbits = max(nbits, f.size + f.offset - 1)
+                nbits = max(nbits, f.size + f.offset)
         elif hasattr(csr, "storage"):
             nbits = int(csr.storage.nbits)
         elif hasattr(csr, "status"):
             nbits = int(csr.status.nbits)
+        elif hasattr(csr ,"r"):
+            nbits = int(csr.r.nbits)
+        elif hasattr(csr, "value"):
+            nbits = int(csr.value.nbits)
+        else:
+            raise ValueError("Internal error: can't determine CSR size of {}".format(csr))
         return nbits
 
     def document_csr(self, csr):
@@ -338,7 +346,7 @@ class DocumentedCSRRegion:
         else:
             self.csrs.append(DocumentedCSR(
                 full_name, self.current_address, short_name=csr.name.upper(), reset=reset, size=size,
-                description=description, fields=fields
+                description=description, fields=fields,
             ))
             self.current_address += 4
 
