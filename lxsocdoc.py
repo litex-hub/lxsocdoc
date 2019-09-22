@@ -240,6 +240,9 @@ class DocumentedCSRRegion:
             bit_offset = 0
             for field in reg.fields:
                 field_name = field.name
+                type_str = ""
+                if field.pulse:
+                    type_str = "\"type\": 4, "
                 if hasattr(field, "start") and field.start is not None:
                     field_name = "{}{}".format(field.name, bit_range(field.start, field.size + field.start, empty_if_zero=True))
                 term=","
@@ -247,7 +250,7 @@ class DocumentedCSRRegion:
                     print("                {\"bits\": " + str(field.offset - bit_offset) + "},", file=stream)
                 if field.offset + field.size == self.busword:
                     term=""
-                print("                {\"name\": \"" + field_name + "\",  \"bits\": " + str(field.size) + "}" + term, file=stream)
+                print("                {\"name\": \"" + field_name + "\",  " + type_str + "\"bits\": " + str(field.size) + "}" + term, file=stream)
                 bit_offset = field.offset + field.size
             if bit_offset != self.busword:
                 print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
