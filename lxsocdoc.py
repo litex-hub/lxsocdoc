@@ -389,7 +389,7 @@ class DocumentedCSRRegion:
             ret += "+-" + "-"*max_value_width + "-+-" + "-"*max_description_width + "-+\n"
         return ret
 
-    def print_region(self, stream):
+    def print_region(self, stream, note_pulses):
         for csr in self.csrs:
             print("{}".format(csr.name), file=stream)
             print("^" * len(csr.name), file=stream)
@@ -414,7 +414,10 @@ class DocumentedCSRRegion:
                         name = "{}{}".format(f.name, bit_range(f.start, f.size + f.start))
                     max_name_width = max(max_name_width, len(name))
 
-                    for d in f.description.splitlines():
+                    description = f.description
+                    if note_pulses and f.pulse:
+                        description = description + "\n\nWriting a 1 to this bit triggers the function"
+                    for d in description.splitlines():
                         max_description_width = max(max_description_width, len(d))
                     if f.values is not None:
                         value_tables[f.name] = self.make_value_table(f.values)
@@ -433,6 +436,9 @@ class DocumentedCSRRegion:
                     name = name.ljust(max_name_width)
 
                     description = f.description
+                    if note_pulses and f.pulse:
+                        description = description + "\n\nWriting a 1 to this bit triggers the function"
+
                     if f.name in value_tables:
                         description += "\n" + value_tables[f.name]
 
@@ -546,7 +552,11 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
         print('    </peripherals>', file=svd)
         print('</device>', file=svd)
 
-def generate_docs(soc, base_dir, project_name="LiteX SoC Project", author="Anonymous", sphinx_extensions=[], quiet=False):
+def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
+                    author="Anonymous",
+                    sphinx_extensions=[],
+                    note_pulses=False,
+                    quiet=False):
     """Possible extra extensions:
         [
             'recommonmark',
@@ -619,4 +629,4 @@ Indices and tables
     # Create a Region file for each of the documented CSR regions.
     for region in documented_regions:
         with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
-            region.print_region(outfile)
+            region.print_region(outfile, note_pulses)
