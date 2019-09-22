@@ -138,8 +138,11 @@ class DocumentedCSRRegion:
             sources = sorted(sources_u, key=lambda x: x.duid)
 
             def source_description(src):
-                base_text = "`1` if a `{}` event occurred. ".format(src.name)
-                if src.description is not None:
+                if hasattr(src, "name") and src.name is not None:
+                    base_text = "`1` if a `{}` event occurred. ".format(src.name)
+                else:
+                    base_text = "`1` if a this particular event occurred. "
+                if hasattr(src, "description") and src.description is not None:
                     return src.description
                 elif isinstance(src, EventSourceLevel):
                     return base_text + "This Event is **level triggered** when the signal is **high**."
@@ -157,7 +160,10 @@ class DocumentedCSRRegion:
                     if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
-                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Level of the `{}` event".format(source.name))))
+                            if hasattr(source, "name"):
+                                fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Level of the `{}` event".format(source.name))))
+                            else:
+                                fields.append(DocumentedCSRField(CSRField("event{}".format(i), offset=i, description="Level of the `event{}` event".format(i))))
                         dcsr.fields = fields
                     if dcsr.description is None:
                         dcsr.description = "This register contains the current raw level of the Event trigger.  Writes to this register have no effect."
@@ -165,7 +171,10 @@ class DocumentedCSRRegion:
                     if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
-                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description=source_description(source))))
+                            if hasattr(source, "name"):
+                                fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description=source_description(source))))
+                            else:
+                                fields.append(DocumentedCSRField(CSRField("event{}".format(i), offset=i, description=source_description(source))))
                         dcsr.fields = fields
                     if dcsr.description is None:
                         dcsr.description = "When an Event occurs, the corresponding bit will be set in this register.  To clear the Event, set the corresponding bit in this register."
@@ -173,7 +182,10 @@ class DocumentedCSRRegion:
                     if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
-                            fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the `{}` Event".format(source.name))))
+                            if hasattr(source, "name"):
+                                fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the `{}` Event".format(source.name))))
+                            else:
+                                fields.append(DocumentedCSRField(CSRField("event{}".format(i), offset=i, description="Write a `1` to enable the `{}` Event".format(i))))
                         dcsr.fields = fields
                     if dcsr.description is None:
                         dcsr.description = "This register enables the corresponding Events.  Write a `0` to this register to disable individual events."
