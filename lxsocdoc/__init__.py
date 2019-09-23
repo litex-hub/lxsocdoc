@@ -123,7 +123,8 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
         print('    </peripherals>', file=svd)
         print('</device>', file=svd)
 
-def generate_docs(soc, base_dir, project_name="LiteX SoC Project", author="Anonymous", sphinx_extensions=[], quiet=False):
+def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
+            author="Anonymous", sphinx_extensions=[], quiet=False, note_pulses=False):
     """Possible extra extensions:
         [
             'recommonmark',
@@ -207,4 +208,4 @@ Indices and tables
     # Create a Region file for each of the documented CSR regions.
     for region in documented_regions:
         with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
-            region.print_region(outfile)
+            region.print_region(outfile, note_pulses)

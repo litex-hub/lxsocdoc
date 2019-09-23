@@ -382,7 +382,7 @@ class DocumentedCSRRegion:
             print("", file=stream)
         print("", file=stream)
 
-    def print_region(self, stream):
+    def print_region(self, stream, note_pulses):
         title = "{}".format(self.name.upper())
         print(title, file=stream)
         print("=" * len(title), file=stream)
@@ -426,7 +426,10 @@ class DocumentedCSRRegion:
                         name = "{}{}".format(f.name, self.bit_range(f.start, f.size + f.start))
                     max_name_width = max(max_name_width, len(name))
 
-                    for d in f.description.splitlines():
+                    description = f.description
+                    if note_pulses and f.pulse:
+                        description = description + "\n\nWriting a 1 to this bit triggers the function."
+                    for d in description.splitlines():
                         max_description_width = max(max_description_width, len(d))
                     if f.values is not None:
                         value_tables[f.name] = self.make_value_table(f.values)
@@ -445,6 +448,9 @@ class DocumentedCSRRegion:
                     name = name.ljust(max_name_width)
 
                     description = f.description
+                    if note_pulses and f.pulse:
+                        description = description + "\n\nWriting a 1 to this bit triggers the function."
+
                     if f.name in value_tables:
                         description += "\n" + value_tables[f.name]
 
