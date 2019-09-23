@@ -4,20 +4,28 @@ from migen.util.misc import xdir
 from litex.soc.interconnect.csr_eventmanager import EventManager
 
 import textwrap
+import inspect
 
 class ModuleDocumentation(DUID):
 
-    def __init__(self, description=None, title=None, file=None):
+    def __init__(self, description=None, title=None, file=None, format="rst"):
+        import os
         DUID.__init__(self)
         self._title = title
         self._lines = None
         self._finalized = False
+        self._format = format
 
         if file == None and description == None and self.__doc__ is None:
             raise ValueError("Must specify `file` or `description` when constructing a ModuleDescription()")
         if file is not None:
+            if not os.path.isabs(file):
+                relative_path = inspect.stack()[1][1]
+                file = os.path.dirname(relative_path) + os.path.sep + file
             with open(file, "r") as f:
-                self.__doc__ = f.readAll()
+                self.__doc__ = f.read()
+            (_, self._format) = os.path.splitext(file)
+            self._format = self._format[1:] # Strip off "." from extension
         elif description is not None:
             self.__doc__ = description
 
