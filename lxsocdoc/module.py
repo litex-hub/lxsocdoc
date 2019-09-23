@@ -68,7 +68,7 @@ def documentationprefix(prefix, documents, done):
     for doc in documents:
         if doc.duid not in done:
             # doc.name = prefix + doc.name
-            done.add(csr.duid)
+            done.add(doc.duid)
 
 def _make_gatherer(method, cls, prefix_cb):
     def gatherer(self):

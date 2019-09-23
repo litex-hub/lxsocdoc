@@ -48,11 +48,7 @@ class DocumentedCSRRegion:
         self.sections = []
         self.csrs = []
 
-        if hasattr(csr_region, "get_module_documentation"):
-            print("Region {} has get_module_documentation()".format(self.name))
-        for obj in submodules:
-            if hasattr(obj, "get_module_documentation"):
-                print("Submodule {} has get_module_documentation()".format(obj))
+        # If the section has extra documentation, gather it.
         if module is not None and hasattr(module, "get_module_documentation"):
             docs = module.get_module_documentation()
             for doc in docs:
@@ -387,6 +383,10 @@ class DocumentedCSRRegion:
         print("", file=stream)
 
     def print_region(self, stream):
+        title = "{}".format(self.name.upper())
+        print(title, file=stream)
+        print("=" * len(title), file=stream)
+
         for section in self.sections:
             print("{}".format(section.title()), file=stream)
             print("-" * len(section.title()), file=stream)
