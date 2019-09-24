@@ -5,7 +5,9 @@
 
 from litex.soc.interconnect.csr import _CompoundCSR
 from .csr import DocumentedCSR, DocumentedCSRField, DocumentedCSRRegion
-from .module import ModuleDocumentation, AutoDocument, gather_submodules
+from .module import gather_submodules, ModuleNotDocumented, DocumentedModule
+
+from litex.soc.integration.doc import ModuleDoc
 
 sphinx_configuration = """
 project = '{}'
@@ -167,16 +169,33 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
     # DocumentedCSRs.
     documented_regions = []
     regions = soc.get_csr_regions()
+    seen_modules = set()
     for csr_region in regions:
         if not hasattr(soc, csr_region[0]):
             raise ValueError("SOC has no module {}".format(csr_region[0]))
         module = getattr(soc, csr_region[0])
+        seen_modules.add(module)
+        print("Examining object {}".format(module))
         submodules = gather_submodules(module)
 
         documented_region = DocumentedCSRRegion(csr_region, module, submodules)
         if documented_region.name in interrupts:
             documented_region.document_interrupt(soc, submodules, interrupts[documented_region.name])
         documented_regions.append(documented_region)
+
+    # Document any modules that are not CSRs:
+    additional_modules = []
+    for (mod_name, mod) in soc._submodules:
+        if mod not in seen_modules:
+            try:
+                additional_modules.append(DocumentedModule(mod_name, mod))
+                print("Added {} to additional modules".format(mod_name))
+            except ModuleNotDocumented:
+                print("DIDN'T ADD {} to additional modules".format(mod_name))
+                pass
+
+    # Add the extra regions such that they come before the CSRs
+    documented_regions = additional_modules + documented_regions
 
     with open(base_dir + "index.rst", "w", encoding="utf-8") as index:
         print("""
