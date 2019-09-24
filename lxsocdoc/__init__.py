@@ -128,6 +128,7 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
             author="Anonymous", sphinx_extensions=[], quiet=False, note_pulses=False):
     """Possible extra extensions:
         [
+            'm2r',
             'recommonmark',
             'sphinx_rtd_theme',
             'sphinx_autodoc_typehints',
@@ -177,7 +178,6 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
             raise ValueError("SOC has no module {}".format(csr_region[0]))
         module = getattr(soc, csr_region[0])
         seen_modules.add(module)
-        print("Examining object {}".format(module))
         submodules = gather_submodules(module)
 
         documented_region = DocumentedCSRRegion(csr_region, module, submodules)
@@ -191,13 +191,8 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
         if mod not in seen_modules:
             try:
                 additional_modules.append(DocumentedModule(mod_name, mod))
-                print("Added {} to additional modules".format(mod_name))
             except ModuleNotDocumented:
-                print("DIDN'T ADD {} to additional modules".format(mod_name))
                 pass
-
-    # Add the extra regions such that they come before the CSRs
-    documented_regions = additional_modules + documented_regions
 
     with open(base_dir + "index.rst", "w", encoding="utf-8") as index:
         print("""
@@ -207,15 +202,26 @@ Documentation for {}
 .. toctree::
     :hidden:
 """.format(project_name, "="*len("Documentation for " + project_name)), file=index)
+        for module in additional_modules:
+            print("    {}".format(module.name), file=index)
         for region in documented_regions:
             print("    {}".format(region.name), file=index)
 
-        print("""
+        if len(additional_modules) > 0:
+            print("""
+Modules
+=======
+""", file=index)
+            for module in additional_modules:
+                print("* :doc:`{} <{}>`".format(module.name.upper(), module.name), file=index)
+
+        if len(documented_regions) > 0:
+            print("""
 Register Groups
 ===============
 """, file=index)
-        for region in documented_regions:
-            print("* :doc:`{} <{}>`".format(region.name.upper(), region.name), file=index)
+            for region in documented_regions:
+                print("* :doc:`{} <{}>`".format(region.name.upper(), region.name), file=index)
 
         print("""
 Indices and tables

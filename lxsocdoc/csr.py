@@ -55,7 +55,6 @@ class DocumentedCSRRegion:
         if module is not None and hasattr(module, "get_module_documentation"):
             docs = module.get_module_documentation()
             for doc in docs:
-                print("Module {} documentation: {}".format(self.name, doc))
                 self.sections.append(doc)
 
         if isinstance(self.raw_csrs, SRAM):
@@ -397,7 +396,6 @@ class DocumentedCSRRegion:
             if section.format() == "rst":
                 print(section.body(), file=stream)
             else:
-                print("Non-rst section found {}".format(self.name))
                 filename = section.path()
                 if filename is not None:
                     print(".. include:: " + filename, file=stream)
