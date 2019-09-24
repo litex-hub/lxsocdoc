@@ -242,3 +242,12 @@ Indices and tables
     for region in additional_modules:
         with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
             region.print_region(outfile, base_dir, note_pulses)
+
+    import os
+    with open(os.path.dirname(__file__) + "/../static/WaveDrom.js", "r") as wd_in:
+        with open(base_dir + "/_static/WaveDrom.js", "w") as wd_out:
+            wd_out.write(wd_in.read())
+
+    with open(os.path.dirname(__file__) + "/../static/default.js", "r") as wd_in:
+        with open(base_dir + "/_static/default.js", "w") as wd_out:
+            wd_out.write(wd_in.read())
