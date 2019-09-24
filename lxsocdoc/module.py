@@ -12,6 +12,8 @@ def gather_submodules(module, depth=0, seen_modules=set(), submodules={
         "event_managers": [],
         "module_doc": [],
     }):
+    if module is None:
+        return submodules
     if depth == 0:
         if isinstance(module, ModuleDoc):
             # print("{} is an instance of ModuleDoc".format(module))

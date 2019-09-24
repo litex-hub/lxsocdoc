@@ -174,10 +174,11 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
     regions = soc.get_csr_regions()
     seen_modules = set()
     for csr_region in regions:
-        if not hasattr(soc, csr_region[0]):
-            raise ValueError("SOC has no module {}".format(csr_region[0]))
-        module = getattr(soc, csr_region[0])
-        seen_modules.add(module)
+        module = None
+        if hasattr(soc, csr_region[0]):
+            # raise ValueError("SOC has no module {} {}".format(csr_region[0], csr_region[3]))
+            module = getattr(soc, csr_region[0])
+            seen_modules.add(module)
         submodules = gather_submodules(module)
 
         documented_region = DocumentedCSRRegion(csr_region, module, submodules)

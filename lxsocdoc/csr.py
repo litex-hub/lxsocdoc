@@ -68,6 +68,10 @@ class DocumentedCSRRegion:
                 else:
                     print("{}: Unknown module: {}".format(self.name, csr))
         elif isinstance(self.raw_csrs, Memory):
+            self.csrs.append(DocumentedCSR(
+                self.name.upper(), self.origin, short_name=self.name.upper(), reset=0, size=self.raw_csrs.width,
+                description="{} x {}-bit memory".format(self.raw_csrs.width, self.raw_csrs.depth)
+            ))
             print("{}@{:x}: Found memory that's {} x {} (but memories aren't documented yet)".format(self.name, self.origin, self.raw_csrs.width, self.raw_csrs.depth))
         else:
             print("{}@{:x}: Unexpected item on the CSR bus: {}".format(self.name, self.origin, self.raw_csrs))
@@ -406,73 +410,74 @@ class DocumentedCSRRegion:
                     print(".. include:: " + temp_filename, file=stream)
             print("", file=stream)
 
-        title = "Register Listing for {}".format(self.name.upper())
-        print(title, file=stream)
-        print("-" * len(title), file=stream)
+        if len(self.csrs) > 0:
+            title = "Register Listing for {}".format(self.name.upper())
+            print(title, file=stream)
+            print("-" * len(title), file=stream)
 
-        csr_table = [["Register", "Address"]]
-        for csr in self.csrs:
-            csr_table.append([csr.name, "``0x{:08x}``".format(csr.address)])
-        self.print_table(csr_table, stream)
+            csr_table = [["Register", "Address"]]
+            for csr in self.csrs:
+                csr_table.append([csr.name, "``0x{:08x}``".format(csr.address)])
+            self.print_table(csr_table, stream)
 
-        for csr in self.csrs:
-            print("{}".format(csr.name), file=stream)
-            print("^" * len(csr.name), file=stream)
-            print("", file=stream)
-            print("**Address: 0x{:08x} + 0x{:x} = 0x{:08x}**".format(self.origin, csr.address - self.origin, csr.address), file=stream)
-            print("", file=stream)
-            if csr.description is not None:
-                print("    {}".format(csr.description), file=stream)
-            self.print_reg(csr, stream)
-            if len(csr.fields) > 0:
-                max_field_width=len("Field")
-                max_name_width=len("Name")
-                max_description_width=len("Description")
-                value_tables = {}
-
-                for f in csr.fields:
-                    field = self.bit_range(f.offset, f.offset + f.size)
-                    max_field_width = max(max_field_width, len(field))
-
-                    name = f.name
-                    if hasattr(f, "start") and f.start is not None:
-                        name = "{}{}".format(f.name, self.bit_range(f.start, f.size + f.start))
-                    max_name_width = max(max_name_width, len(name))
-
-                    description = f.description
-                    if note_pulses and f.pulse:
-                        description = description + "\n\nWriting a 1 to this bit triggers the function."
-                    for d in description.splitlines():
-                        max_description_width = max(max_description_width, len(d))
-                    if f.values is not None:
-                        value_tables[f.name] = self.make_value_table(f.values)
-                        for d in value_tables[f.name].splitlines():
-                            max_description_width = max(max_description_width, len(d))
+            for csr in self.csrs:
+                print("{}".format(csr.name), file=stream)
+                print("^" * len(csr.name), file=stream)
                 print("", file=stream)
-                print("+-" + "-"*max_field_width + "-+-" + "-"*max_name_width + "-+-" + "-"*max_description_width + "-+", file=stream)
-                print("| " + "Field".ljust(max_field_width) + " | " + "Name".ljust(max_name_width) + " | " + "Description".ljust(max_description_width) + " |", file=stream)
-                print("+=" + "="*max_field_width + "=+=" + "="*max_name_width + "=+=" + "="*max_description_width + "=+", file=stream)
-                for f in csr.fields:
-                    field = self.bit_range(f.offset, f.offset + f.size).ljust(max_field_width)
+                print("**Address: 0x{:08x} + 0x{:x} = 0x{:08x}**".format(self.origin, csr.address - self.origin, csr.address), file=stream)
+                print("", file=stream)
+                if csr.description is not None:
+                    print("    {}".format(csr.description), file=stream)
+                self.print_reg(csr, stream)
+                if len(csr.fields) > 0:
+                    max_field_width=len("Field")
+                    max_name_width=len("Name")
+                    max_description_width=len("Description")
+                    value_tables = {}
 
-                    name = f.name.upper()
-                    if hasattr(f, "start") and f.start is not None:
-                        name = "{}{}".format(f.name.upper(), self.bit_range(f.start, f.size + f.start))
-                    name = name.ljust(max_name_width)
+                    for f in csr.fields:
+                        field = self.bit_range(f.offset, f.offset + f.size)
+                        max_field_width = max(max_field_width, len(field))
 
-                    description = f.description
-                    if note_pulses and f.pulse:
-                        description = description + "\n\nWriting a 1 to this bit triggers the function."
+                        name = f.name
+                        if hasattr(f, "start") and f.start is not None:
+                            name = "{}{}".format(f.name, self.bit_range(f.start, f.size + f.start))
+                        max_name_width = max(max_name_width, len(name))
 
-                    if f.name in value_tables:
-                        description += "\n" + value_tables[f.name]
-
-                    first_line = True
-                    for d in description.splitlines():
-                        if first_line:
-                            print("| {} | {} | {} |".format(field, name, d.ljust(max_description_width)), file=stream)
-                            first_line = False
-                        else:
-                            print("| {} | {} | {} |".format(" ".ljust(max_field_width), " ".ljust(max_name_width), d.ljust(max_description_width)), file=stream)
+                        description = f.description
+                        if note_pulses and f.pulse:
+                            description = description + "\n\nWriting a 1 to this bit triggers the function."
+                        for d in description.splitlines():
+                            max_description_width = max(max_description_width, len(d))
+                        if f.values is not None:
+                            value_tables[f.name] = self.make_value_table(f.values)
+                            for d in value_tables[f.name].splitlines():
+                                max_description_width = max(max_description_width, len(d))
+                    print("", file=stream)
                     print("+-" + "-"*max_field_width + "-+-" + "-"*max_name_width + "-+-" + "-"*max_description_width + "-+", file=stream)
-            print("", file=stream)
+                    print("| " + "Field".ljust(max_field_width) + " | " + "Name".ljust(max_name_width) + " | " + "Description".ljust(max_description_width) + " |", file=stream)
+                    print("+=" + "="*max_field_width + "=+=" + "="*max_name_width + "=+=" + "="*max_description_width + "=+", file=stream)
+                    for f in csr.fields:
+                        field = self.bit_range(f.offset, f.offset + f.size).ljust(max_field_width)
+
+                        name = f.name.upper()
+                        if hasattr(f, "start") and f.start is not None:
+                            name = "{}{}".format(f.name.upper(), self.bit_range(f.start, f.size + f.start))
+                        name = name.ljust(max_name_width)
+
+                        description = f.description
+                        if note_pulses and f.pulse:
+                            description = description + "\n\nWriting a 1 to this bit triggers the function."
+
+                        if f.name in value_tables:
+                            description += "\n" + value_tables[f.name]
+
+                        first_line = True
+                        for d in description.splitlines():
+                            if first_line:
+                                print("| {} | {} | {} |".format(field, name, d.ljust(max_description_width)), file=stream)
+                                first_line = False
+                            else:
+                                print("| {} | {} | {} |".format(" ".ljust(max_field_width), " ".ljust(max_name_width), d.ljust(max_description_width)), file=stream)
+                        print("+-" + "-"*max_field_width + "-+-" + "-"*max_name_width + "-+-" + "-"*max_description_width + "-+", file=stream)
+                print("", file=stream)
