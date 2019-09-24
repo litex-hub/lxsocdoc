@@ -145,7 +145,7 @@ class DocumentedModule:
         if not has_documentation:
             raise ModuleNotDocumented()
 
-    def print_region(self, stream, note_pulses=False):
+    def print_region(self, stream, base_dir, note_pulses=False):
         title = "{}".format(self.name.upper())
         print(title, file=stream)
         print("=" * len(title), file=stream)

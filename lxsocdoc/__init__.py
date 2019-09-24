@@ -14,8 +14,7 @@ project = '{}'
 copyright = '{}, {}'
 author = '{}'
 extensions = [
-    'sphinxcontrib.wavedrom',
-    {}
+    'sphinxcontrib.wavedrom',{}
 ]
 templates_path = ['_templates']
 exclude_patterns = []
@@ -153,7 +152,10 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
     with open(base_dir + "conf.py", "w", encoding="utf-8") as conf:
         import datetime
         year = datetime.datetime.now().year
-        print(sphinx_configuration.format(project_name, year, author, author, ",\n    ".join(sphinx_extensions)), file=conf)
+        sphinx_ext_str = ""
+        for ext in sphinx_extensions:
+            sphinx_ext_str += "\n    \"{}\",".format(ext)
+        print(sphinx_configuration.format(project_name, year, author, author, sphinx_ext_str), file=conf)
     if not quiet:
         print("Generate the documentation by running `sphinx-build -M html {} {}_build`".format(base_dir, base_dir))
 
@@ -227,4 +229,4 @@ Indices and tables
     # Create a Region file for each of the documented CSR regions.
     for region in documented_regions:
         with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
-            region.print_region(outfile, note_pulses)
+            region.print_region(outfile, base_dir, note_pulses)

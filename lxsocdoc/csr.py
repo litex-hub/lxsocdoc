@@ -385,7 +385,7 @@ class DocumentedCSRRegion:
             print("", file=stream)
         print("", file=stream)
 
-    def print_region(self, stream, note_pulses):
+    def print_region(self, stream, base_dir, note_pulses):
         title = "{}".format(self.name.upper())
         print(title, file=stream)
         print("=" * len(title), file=stream)
@@ -394,7 +394,18 @@ class DocumentedCSRRegion:
         for section in self.sections:
             print("{}".format(section.title()), file=stream)
             print("-" * len(section.title()), file=stream)
-            print(section.body(), file=stream)
+            if section.format() == "rst":
+                print(section.body(), file=stream)
+            else:
+                print("Non-rst section found {}".format(self.name))
+                filename = section.path()
+                if filename is not None:
+                    print(".. include:: " + filename, file=stream)
+                else:
+                    temp_filename = self.name + '-' + hash(section.title()) + section.format()
+                    with open(temp_filename, "w") as cache:
+                        print(section.body(), file=cache)
+                    print(".. include:: " + temp_filename, file=stream)
             print("", file=stream)
 
         title = "Register Listing for {}".format(self.name.upper())
