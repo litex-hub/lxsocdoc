@@ -237,3 +237,8 @@ Indices and tables
     for region in documented_regions:
         with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
             region.print_region(outfile, base_dir, note_pulses)
+
+    # Create a Region file for each additional non-CSR module
+    for region in additional_modules:
+        with open(base_dir + region.name + ".rst", "w", encoding="utf-8") as outfile:
+            region.print_region(outfile, base_dir, note_pulses)
