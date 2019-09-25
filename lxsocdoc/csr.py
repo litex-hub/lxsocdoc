@@ -9,7 +9,7 @@ from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, Eve
 
 import textwrap
 
-from .rst import print_table
+from .rst import print_table, reflow
 
 class DocumentedCSRField:
     def __init__(self, field):
@@ -26,10 +26,9 @@ class DocumentedCSRField:
         self.start       = None
 
 class DocumentedCSR:
-    def trim(docstring):
+    def trim(self, docstring):
         if docstring is not None:
-            import textwrap
-            return textwrap.dedent(docstring).replace("\n", " ")
+            return textwrap.indent(reflow(docstring), prefix="    ")
         return None
         
     def __init__(self, name, address, short_name="", reset=0, offset=0, size=8, description=None, fields=[]):
@@ -40,11 +39,11 @@ class DocumentedCSR:
         self.size = size
         if size == 0:
             print("!!! Warning: creating CSR of size 0 {}".format(name))
-        self.description = DocumentedCSR.trim(description)
+        self.description = self.trim(description)
         self.reset_value = reset
         self.fields = fields
         for f in self.fields:
-            f.description = DocumentedCSR.trim(f.description)
+            f.description = self.trim(f.description)
 
 class DocumentedCSRRegion:
     def __init__(self, csr_region, module=None, submodules=[]):
@@ -393,7 +392,7 @@ class DocumentedCSRRegion:
                 print("`Address: 0x{:08x} + 0x{:x} = 0x{:08x}`".format(self.origin, csr.address - self.origin, csr.address), file=stream)
                 print("", file=stream)
                 if csr.description is not None:
-                    print("    {}".format(csr.description), file=stream)
+                    print(csr.description, file=stream)
                 self.print_reg(csr, stream)
                 if len(csr.fields) > 0:
                     max_field_width=len("Field")
