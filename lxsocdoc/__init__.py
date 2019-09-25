@@ -14,6 +14,7 @@ project = '{}'
 copyright = '{}, {}'
 author = '{}'
 extensions = [
+    'sphinx.ext.autosectionlabel',
     'sphinxcontrib.wavedrom',{}
 ]
 templates_path = ['_templates']

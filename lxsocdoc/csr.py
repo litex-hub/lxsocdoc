@@ -383,7 +383,7 @@ class DocumentedCSRRegion:
 
             csr_table = [["Register", "Address"]]
             for csr in self.csrs:
-                csr_table.append([csr.name, "``0x{:08x}``".format(csr.address)])
+                csr_table.append([":ref:`{} <{}>`".format(csr.name, csr.name), ":ref:`0x{:08x} <{}>`".format(csr.address, csr.name)])
             print_table(csr_table, stream)
 
             for csr in self.csrs:
