@@ -7,7 +7,7 @@ from litex.soc.integration.doc import ModuleDoc
 import textwrap
 import inspect
 
-from .rst import print_table
+from .rst import print_table, print_rst
 
 def gather_submodules(module, depth=0, seen_modules=set(), submodules={
         "event_managers": [],
@@ -89,18 +89,21 @@ class DocumentedInterrupts(DocumentedModule):
         print("=" * len(title), file=stream)
         print("", file=stream)
 
-        print("""This device has an ``EventManager``-based interrupt
+        print_rst(stream,
+        """
+        This device has an ``EventManager``-based interrupt
         system.  Individual modules generate `events` which are wired
         into a central interrupt controller.
 
         When an interrupt occurs, you should look the interrupt number up
         in the CPU-specific interrupt table and then call the relevant
         module.
-        """, file=stream)
+        """)
 
         section_title = "Assigned Interrupts"
         print("{}".format(section_title), file=stream)
         print("-" * len(section_title), file=stream)
+        print("", file=stream)
 
         print("The following interrupts are assigned on this system:", file=stream)
         print_table(self.irq_table, stream)

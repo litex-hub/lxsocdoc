@@ -1,3 +1,4 @@
+import textwrap
 
 def print_table(table, stream):
     """Print a reStructured Text table
@@ -54,4 +55,31 @@ def print_table(table, stream):
             print("-" + "-"*column_widths[i], file=stream, end="")
             print("-+", file=stream, end="")
         print("", file=stream)
+    print("", file=stream)
+
+def reflow(s, width=80):
+    """Reflow the jagged text that gets generated as part
+    of this Python comment.
+
+    In this comment, the first line would be indented relative
+    to the rest.  Additionally, the width of this block would
+    be limited to the original text width.
+
+    To reflow text, break it along \n\n, then dedent and reflow
+    each line individually.
+
+    Finally, append it to a new string to be returned.
+    """
+    out = []
+    for piece in textwrap.dedent(s).split("\n\n"):
+        trimmed_piece = textwrap.fill(textwrap.dedent(piece).strip(), width=width)
+        out.append(trimmed_piece)
+    return "\n\n".join(out)
+
+def _reflow(s, width=80):
+    return reflow(s, width)
+
+def print_rst(stream, s, reflow=True):
+    """Print a given string to the given stream.  Ensure it is reflowed."""
+    print(_reflow(s), file=stream)
     print("", file=stream)
