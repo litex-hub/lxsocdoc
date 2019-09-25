@@ -7,6 +7,7 @@ from litex.soc.integration.doc import ModuleDoc
 import textwrap
 import inspect
 
+from .rst import print_table
 
 def gather_submodules(module, depth=0, seen_modules=set(), submodules={
         "event_managers": [],
@@ -39,10 +40,9 @@ class ModuleNotDocumented(Exception):
 class DocumentedModule:
     """Multi-section Documentation of a Module"""
 
-    def __init__(self, name, module):
+    def __init__(self, name, module, has_documentation=False):
         self.name = name
         self.sections = []
-        has_documentation = False
 
         if isinstance(module, ModuleDoc):
             has_documentation = True
@@ -69,4 +69,40 @@ class DocumentedModule:
             print("-" * len(title), file=stream)
             print(textwrap.dedent(body), file=stream)
             print("", file=stream)
+
+class DocumentedInterrupts(DocumentedModule):
+    """A :obj:`DocumentedModule` that automatically documents interrupts in an SoC
+
+    This creates a :obj:`DocumentedModule` object that prints out the contents
+    of the interrupt map of an SoC.
+    """
+    def __init__(self, interrupts):
+        DocumentedModule.__init__(self, "interrupts", None, has_documentation=True)
+
+        self.irq_table = [["Interrupt", "Module"]]
+        for module_name, irq_no in interrupts.items():
+            self.irq_table.append([str(irq_no), ":doc:`{} <{}>`".format(module_name.upper(), module_name)])
+
+    def print_region(self, stream, base_dir, note_pulses=False):
+        title = "Interrupt Controller"
+        print(title, file=stream)
+        print("=" * len(title), file=stream)
+        print("", file=stream)
+
+        print("""This device has an ``EventManager``-based interrupt
+        system.  Individual modules generate `events` which are wired
+        into a central interrupt controller.
+
+        When an interrupt occurs, you should look the interrupt number up
+        in the CPU-specific interrupt table and then call the relevant
+        module.
+        """, file=stream)
+
+        section_title = "Assigned Interrupts"
+        print("{}".format(section_title), file=stream)
+        print("-" * len(section_title), file=stream)
+
+        print("The following interrupts are assigned on this system:", file=stream)
+        print_table(self.irq_table, stream)
+        
 

@@ -5,7 +5,7 @@
 
 from litex.soc.interconnect.csr import _CompoundCSR
 from .csr import DocumentedCSR, DocumentedCSRField, DocumentedCSRRegion
-from .module import gather_submodules, ModuleNotDocumented, DocumentedModule
+from .module import gather_submodules, ModuleNotDocumented, DocumentedModule, DocumentedInterrupts
 
 from litex.soc.integration.doc import ModuleDoc
 
@@ -136,7 +136,7 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
         ]
     """
 
-    # Connect interrupts
+    # Ensure the SoC has an interrupt handler
     if not hasattr(soc, "cpu"):
         raise ValueError("Module has no CPU attribute")
     if not hasattr(soc.cpu, "interrupt"):
@@ -188,7 +188,9 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
         documented_regions.append(documented_region)
 
     # Document any modules that are not CSRs:
-    additional_modules = []
+    additional_modules = [
+        DocumentedInterrupts(interrupts),
+    ]
     for (mod_name, mod) in soc._submodules:
         if mod not in seen_modules:
             try:

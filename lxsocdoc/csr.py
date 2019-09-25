@@ -9,6 +9,8 @@ from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, Eve
 
 import textwrap
 
+from .rst import print_table
+
 class DocumentedCSRField:
     def __init__(self, field):
         self.name        = field.name
@@ -349,53 +351,6 @@ class DocumentedCSRRegion:
             ret += "+-" + "-"*max_value_width + "-+-" + "-"*max_description_width + "-+\n"
         return ret
 
-    def print_table(self, table, stream):
-        column_widths = []
-
-        print("", file=stream)
-        if len(table) <= 0:
-            return
-
-        # Figure out how wide to make each column
-        for col in table[0]:
-            column_widths.append(0)
-
-        for row in table:
-            for i, column in enumerate(row):
-                column_widths[i] = max(column_widths[i], len(column))
-
-        # Print out header
-        header = table.pop(0)
-        print("+", file=stream, end="")
-        for i, column in enumerate(header):
-            print("-" + "-"*column_widths[i], file=stream, end="")
-            print("-+", file=stream, end="")
-        print("", file=stream)
-
-        print("|", file=stream, end="")
-        for i, column in enumerate(header):
-            print(" " + column.ljust(column_widths[i]) + " |", file=stream, end="")
-        print("", file=stream)
-
-        print("+", file=stream, end="")
-        for i, column in enumerate(header):
-            print("=" + "="*column_widths[i], file=stream, end="")
-            print("=+", file=stream, end="")
-        print("", file=stream)
-
-        for row in table:
-            print("|", file=stream, end="")
-            for i, column in enumerate(row):
-                print(" " + column.ljust(column_widths[i]) + " |", file=stream, end="")
-            print("", file=stream)
-
-            print("+", file=stream, end="")
-            for i, column in enumerate(row):
-                print("-" + "-"*column_widths[i], file=stream, end="")
-                print("-+", file=stream, end="")
-            print("", file=stream)
-        print("", file=stream)
-
     def print_region(self, stream, base_dir, note_pulses):
         title = "{}".format(self.name.upper())
         print(title, file=stream)
@@ -429,7 +384,7 @@ class DocumentedCSRRegion:
             csr_table = [["Register", "Address"]]
             for csr in self.csrs:
                 csr_table.append([csr.name, "``0x{:08x}``".format(csr.address)])
-            self.print_table(csr_table, stream)
+            print_table(csr_table, stream)
 
             for csr in self.csrs:
                 print("{}".format(csr.name), file=stream)
