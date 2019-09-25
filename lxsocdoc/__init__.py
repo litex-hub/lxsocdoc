@@ -41,7 +41,7 @@ def print_svd_register(csr, csr_address, description, svd):
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
     print('                    <resetValue>0x{:02x}</resetValue>'.format(csr.reset_value), file=svd)
     csr_address = csr_address + 4
-    if hasattr(csr, "fields"):
+    if hasattr(csr, "fields") and len(csr.fields) > 0:
         print('                    <fields>', file=svd)
         for field in csr.fields:
             print('                        <field>', file=svd)
