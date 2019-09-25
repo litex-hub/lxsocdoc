@@ -390,7 +390,7 @@ class DocumentedCSRRegion:
                 print("{}".format(csr.name), file=stream)
                 print("^" * len(csr.name), file=stream)
                 print("", file=stream)
-                print("**Address: 0x{:08x} + 0x{:x} = 0x{:08x}**".format(self.origin, csr.address - self.origin, csr.address), file=stream)
+                print("`Address: 0x{:08x} + 0x{:x} = 0x{:08x}`".format(self.origin, csr.address - self.origin, csr.address), file=stream)
                 print("", file=stream)
                 if csr.description is not None:
                     print("    {}".format(csr.description), file=stream)
