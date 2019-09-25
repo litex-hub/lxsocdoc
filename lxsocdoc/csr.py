@@ -14,7 +14,7 @@ class DocumentedCSRField:
         self.name        = field.name
         self.size        = field.size
         self.offset      = field.offset
-        self.reset_value = field.reset
+        self.reset_value = field.reset.value
         self.description = field.description
         self.access      = field.access
         self.pulse       = field.pulse
@@ -39,7 +39,7 @@ class DocumentedCSR:
         if size == 0:
             print("!!! Warning: creating CSR of size 0 {}".format(name))
         self.description = DocumentedCSR.trim(description)
-        self.reset = reset
+        self.reset_value = reset
         self.fields = fields
         for f in self.fields:
             f.description = DocumentedCSR.trim(f.description)
@@ -196,6 +196,9 @@ class DocumentedCSRRegion:
             bit_offset = 0
             for field in reg.fields:
                 field_name = field.name
+                attr_str = ""
+                if field.reset_value != 0:
+                    attr_str = "\"attr\": '" + str(field.reset_value) + "', "
                 type_str = ""
                 if field.pulse:
                     type_str = "\"type\": 4, "
@@ -206,7 +209,7 @@ class DocumentedCSRRegion:
                     print("                {\"bits\": " + str(field.offset - bit_offset) + "},", file=stream)
                 if field.offset + field.size == self.busword:
                     term=""
-                print("                {\"name\": \"" + field_name + "\",  " + type_str + "\"bits\": " + str(field.size) + "}" + term, file=stream)
+                print("                {\"name\": \"" + field_name + "\",  " + type_str + attr_str + "\"bits\": " + str(field.size) + "}" + term, file=stream)
                 bit_offset = field.offset + field.size
             if bit_offset != self.busword:
                 print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
@@ -214,7 +217,10 @@ class DocumentedCSRRegion:
             term=""
             if reg.size != 8:
                 term=","
-            print("                {\"name\": \"" + reg.short_name.lower() + self.bit_range(reg.offset, reg.offset + reg.size, empty_if_zero=True) + "\",  \"bits\": " + str(reg.size) + "}" + term, file=stream)
+            attr_str = ""
+            if reg.reset_value != 0:
+                attr_str = "\"attr\": 'reset: " + str(reg.reset_value) + "', "
+            print("                {\"name\": \"" + reg.short_name.lower() + self.bit_range(reg.offset, reg.offset + reg.size, empty_if_zero=True) + "\", " + attr_str + "\"bits\": " + str(reg.size) + "}" + term, file=stream)
             if reg.size != 8:
                 print("                {\"bits\": " + str(8 - reg.size) + "},", file=stream)
         print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}", file=stream)
