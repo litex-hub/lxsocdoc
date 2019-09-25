@@ -85,7 +85,8 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
             print('            <name>{}</name>'.format(region.name.upper()), file=svd)
             print('            <baseAddress>0x{:08X}</baseAddress>'.format(region.origin), file=svd)
             print('            <groupName>{}</groupName>'.format(region.name.upper()), file=svd)
-            print('            <description></description>', file=svd)
+            if len(region.sections) > 0:
+                print('            <description><![CDATA[{}]]></description>'.format(region.sections[0].body()), file=svd)
             print('            <registers>', file=svd)
             for csr in region.csrs:
                 description = None
@@ -94,7 +95,7 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
                 if isinstance(csr, _CompoundCSR) and len(csr.simple_csrs) > 1:
                     is_first = True
                     for i in range(len(csr.simple_csrs)):
-                        (start, length, name) = sub_csr_bit_range(region_busword, csr, i)
+                        (start, length, name) = sub_csr_bit_range(region.busword, csr, i)
                         sub_name = csr.name.upper() + "_" + name
                         bits_str = "Bits {}-{} of `{}`.".format(start, start+length, csr.name)
                         if is_first:

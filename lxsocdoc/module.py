@@ -63,8 +63,10 @@ class DocumentedModule:
         print("", file=stream)
 
         for section in self.sections:
-            print("{}".format(section.title()), file=stream)
-            print("-" * len(section.title()), file=stream)
-            print(section.body(), file=stream)
+            title = textwrap.dedent(section.title())
+            body = textwrap.dedent(section.body())
+            print("{}".format(title), file=stream)
+            print("-" * len(title), file=stream)
+            print(textwrap.dedent(body), file=stream)
             print("", file=stream)
 

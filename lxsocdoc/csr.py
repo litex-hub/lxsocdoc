@@ -7,6 +7,8 @@ from litex.soc.interconnect.csr_bus import SRAM
 from litex.soc.interconnect.csr import _CompoundCSR, CSRStatus, CSRStorage, CSRField, _CSRBase
 from litex.soc.interconnect.csr_eventmanager import _EventSource, SharedIRQ, EventManager, EventSourceLevel, EventSourceProcess, EventSourcePulse
 
+import textwrap
+
 class DocumentedCSRField:
     def __init__(self, field):
         self.name        = field.name
@@ -395,18 +397,21 @@ class DocumentedCSRRegion:
         print("", file=stream)
 
         for section in self.sections:
-            print("{}".format(section.title()), file=stream)
-            print("-" * len(section.title()), file=stream)
+            title = textwrap.dedent(section.title())
+            body = textwrap.dedent(section.body())
+            print("{}".format(title), file=stream)
+            print("-" * len(title), file=stream)
+
             if section.format() == "rst":
-                print(section.body(), file=stream)
+                print(body, file=stream)
             else:
                 filename = section.path()
                 if filename is not None:
                     print(".. include:: " + filename, file=stream)
                 else:
-                    temp_filename = self.name + '-' + hash(section.title()) + section.format()
+                    temp_filename = self.name + '-' + hash(title) + "." + section.format()
                     with open(temp_filename, "w") as cache:
-                        print(section.body(), file=cache)
+                        print(body, file=cache)
                     print(".. include:: " + temp_filename, file=stream)
             print("", file=stream)
 
