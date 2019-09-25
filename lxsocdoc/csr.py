@@ -28,7 +28,7 @@ class DocumentedCSRField:
 class DocumentedCSR:
     def trim(self, docstring):
         if docstring is not None:
-            return textwrap.indent(reflow(docstring), prefix="    ")
+            return reflow(docstring)
         return None
         
     def __init__(self, name, address, short_name="", reset=0, offset=0, size=8, description=None, fields=[]):
@@ -392,7 +392,7 @@ class DocumentedCSRRegion:
                 print("`Address: 0x{:08x} + 0x{:x} = 0x{:08x}`".format(self.origin, csr.address - self.origin, csr.address), file=stream)
                 print("", file=stream)
                 if csr.description is not None:
-                    print(csr.description, file=stream)
+                    print(textwrap.indent(csr.description, prefix="    "), file=stream)
                 self.print_reg(csr, stream)
                 if len(csr.fields) > 0:
                     max_field_width=len("Field")
