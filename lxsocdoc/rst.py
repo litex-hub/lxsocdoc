@@ -1,5 +1,61 @@
 import textwrap
 
+def make_table(t):
+    """Make a reStructured Text Table
+
+    Returns
+    -------
+
+    A string containing a reStructured Text table.
+    """
+    column_widths = []
+
+    table = "\n"
+    if len(t) <= 0:
+        return table
+
+    # Figure out how wide to make each column
+    for col in t[0]:
+        column_widths.append(0)
+
+    for row in t:
+        for i, column in enumerate(row):
+            column_widths[i] = max(column_widths[i], len(column))
+
+    # Print out header
+    header = t.pop(0)
+    table += "+"
+    for i, column in enumerate(header):
+        table += "-" + "-"*column_widths[i]
+        table += "-+"
+    table += "\n"
+
+    table += "|"
+    for i, column in enumerate(header):
+        table += " " + column.ljust(column_widths[i]) + " |"
+    table += "\n"
+
+    table += "+"
+    for i, column in enumerate(header):
+        table += "=" + "="*column_widths[i]
+        table += "=+"
+    table += "\n"
+
+    for row in t:
+        table += "|"
+        for i, column in enumerate(row):
+            table += " " + column.ljust(column_widths[i]) + " |"
+        table += "\n"
+
+        table += "+"
+        for i, column in enumerate(row):
+            table += "-" + "-"*column_widths[i]
+            table += "-+"
+        table += "\n"
+    table += "\n"
+
+    return table
+
 def print_table(table, stream):
     """Print a reStructured Text table
 
