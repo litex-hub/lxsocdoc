@@ -292,7 +292,7 @@ class DocumentedCSRRegion:
                     if description is None:
                         d = bits_str
                     else:
-                        d = bits_str + " " + d
+                        d = bits_str + " " + reflow(d)
                     self.csrs.append(DocumentedCSR(
                         sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
                         offset=start,
