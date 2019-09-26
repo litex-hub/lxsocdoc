@@ -30,10 +30,11 @@ class DocumentedCSR:
         if docstring is not None:
             return reflow(docstring)
         return None
-        
-    def __init__(self, name, address, short_name="", reset=0, offset=0, size=8, description=None, fields=[]):
+
+    def __init__(self, name, address, short_numbered_name="", short_name="", reset=0, offset=0, size=8, description=None, fields=[]):
         self.name = name
         self.short_name = short_name
+        self.short_numbered_name = short_numbered_name
         self.address = address
         self.offset = offset
         self.size = size
@@ -72,7 +73,7 @@ class DocumentedCSRRegion:
                     print("{}: Unknown module: {}".format(self.name, csr))
         elif isinstance(self.raw_csrs, Memory):
             self.csrs.append(DocumentedCSR(
-                self.name.upper(), self.origin, short_name=self.name.upper(), reset=0, size=self.raw_csrs.width,
+                self.name.upper(), self.origin, short_numbered_name=self.name.upper(), short_name=self.name.upper(), reset=0, size=self.raw_csrs.width,
                 description="{} x {}-bit memory".format(self.raw_csrs.width, self.raw_csrs.depth)
             ))
             print("{}@{:x}: Found memory that's {} x {} (but memories aren't documented yet)".format(self.name, self.origin, self.raw_csrs.width, self.raw_csrs.depth))
@@ -293,20 +294,20 @@ class DocumentedCSRRegion:
                     else:
                         d = bits_str + " " + d
                     self.csrs.append(DocumentedCSR(
-                        sub_name, self.current_address, short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
+                        sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
                         offset=start,
                         description=d, fields=self.split_fields(fields, start, start + length)
                     ))
                 else:
                     self.csrs.append(DocumentedCSR(
-                        sub_name, self.current_address, short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
+                        sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
                         offset=start,
                         description=bits_str, fields=self.split_fields(fields, start, start + length)
                     ))
                 self.current_address += 4
         else:
             self.csrs.append(DocumentedCSR(
-                full_name, self.current_address, short_name=csr.name.upper(), reset=reset, size=size,
+                full_name, self.current_address, short_numbered_name=csr.name.upper(), short_name=csr.name.upper(), reset=reset, size=size,
                 description=description, fields=fields,
             ))
             self.current_address += 4

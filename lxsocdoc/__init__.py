@@ -4,10 +4,9 @@
 #pylint:disable=E1101
 
 from litex.soc.interconnect.csr import _CompoundCSR
-from .csr import DocumentedCSR, DocumentedCSRField, DocumentedCSRRegion
+from .csr import DocumentedCSRRegion
 from .module import gather_submodules, ModuleNotDocumented, DocumentedModule, DocumentedInterrupts
-
-from litex.soc.integration.doc import ModuleDoc
+from .rst import reflow
 
 sphinx_configuration = """
 project = '{}'
@@ -35,7 +34,7 @@ def sub_csr_bit_range(busword, csr, offset):
 
 def print_svd_register(csr, csr_address, description, svd):
     print('                <register>', file=svd)
-    print('                    <name>{}</name>'.format(csr.name), file=svd)
+    print('                    <name>{}</name>'.format(csr.short_numbered_name), file=svd)
     if description is not None:
         print('                    <description>{}</description>'.format(description), file=svd)
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
@@ -49,7 +48,7 @@ def print_svd_register(csr, csr_address, description, svd):
             print('                            <msb>{}</msb>'.format(field.offset + field.size - 1), file=svd)
             print('                            <bitRange>[{}:{}]</bitRange>'.format(field.offset + field.size - 1, field.offset), file=svd)
             print('                            <lsb>{}</lsb>'.format(field.offset), file=svd)
-            print('                            <description>{}</description>'.format(field.description), file=svd)
+            print('                            <description><![CDATA[{}]]></description>'.format(reflow(field.description)), file=svd)
             print('                        </field>', file=svd)
         print('                    </fields>', file=svd)
     print('                </register>', file=svd)
@@ -87,7 +86,7 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
             print('            <baseAddress>0x{:08X}</baseAddress>'.format(region.origin), file=svd)
             print('            <groupName>{}</groupName>'.format(region.name.upper()), file=svd)
             if len(region.sections) > 0:
-                print('            <description><![CDATA[{}]]></description>'.format(region.sections[0].body()), file=svd)
+                print('            <description><![CDATA[{}]]></description>'.format(reflow(region.sections[0].body())), file=svd)
             print('            <registers>', file=svd)
             for csr in region.csrs:
                 description = None
