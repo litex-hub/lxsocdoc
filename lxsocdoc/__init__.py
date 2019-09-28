@@ -136,12 +136,6 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
         ]
     """
 
-    # Ensure the SoC has an interrupt handler
-    if not hasattr(soc, "cpu"):
-        raise ValueError("Module has no CPU attribute")
-    if not hasattr(soc.cpu, "interrupt"):
-        raise ValueError("CPU has no interrupt module")
-
     # Ensure the target directory is a full path
     if base_dir[-1] != '/':
         base_dir = base_dir + '/'
