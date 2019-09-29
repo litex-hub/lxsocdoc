@@ -365,15 +365,15 @@ class DocumentedCSRRegion:
 
             if section.format() == "rst":
                 print(body, file=stream)
-            else:
+            elif section.format() == "md":
                 filename = section.path()
                 if filename is not None:
-                    print(".. include:: " + filename, file=stream)
+                    print(".. mdinclude:: " + filename, file=stream)
                 else:
-                    temp_filename = self.name + '-' + hash(title) + "." + section.format()
-                    with open(temp_filename, "w") as cache:
+                    temp_filename = self.name + '-' + str(hash(title)) + "." + section.format()
+                    with open(base_dir + "/" + temp_filename, "w") as cache:
                         print(body, file=cache)
-                    print(".. include:: " + temp_filename, file=stream)
+                    print(".. mdinclude:: " + temp_filename, file=stream)
             print("", file=stream)
 
         if len(self.csrs) > 0:
