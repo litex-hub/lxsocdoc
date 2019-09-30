@@ -325,6 +325,10 @@ class DocumentedCSRRegion:
             else:
                 raise ValueError("Unexpected length of CSRField's value tuple")
 
+            # Ensure the value is a string
+            if not isinstance(value, str):
+                value = "{}".format(value)
+
             max_value_width = max(max_value_width, len(value))
             for d in description.splitlines():
                 max_description_width = max(max_description_width, len(d))
@@ -340,6 +344,11 @@ class DocumentedCSRRegion:
                 (value, name, description) = v
             else:
                 raise ValueError("Unexpected length of CSRField's value tuple")
+
+            # Ensure the value is a string
+            if not isinstance(value, str):
+                value = "{}".format(value)
+
             value = value.ljust(max_value_width)
             first_line = True
             for d in description.splitlines():
