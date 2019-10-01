@@ -59,8 +59,14 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
         interrupts[csr] = irq
 
     documented_regions = []
-    regions = soc.get_csr_regions()
-    for csr_region in regions:
+
+    raw_regions = []
+    if hasattr(soc, "get_csr_regions"):
+        raw_regions = soc.get_csr_regions()
+    else:
+        for region_name, region in soc.csr_regions.items():
+            raw_regions.append((region_name, region.origin, region.busword, region.obj))
+    for csr_region in raw_regions:
         documented_regions.append(DocumentedCSRRegion(csr_region))
 
     with open(buildpath + "/" + name + ".svd", "w", encoding="utf-8") as svd:
@@ -166,12 +172,18 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
     # that are larger than the buswidth will be turned into multiple
     # DocumentedCSRs.
     documented_regions = []
-    regions = soc.get_csr_regions()
     seen_modules = set()
+    regions = []
+    # Previously, litex contained a function to gather csr regions.
+    if hasattr(soc, "get_csr_regions"):
+        regions = soc.get_csr_regions()
+    else:
+        # Now we just access the regions directly.
+        for region_name, region in soc.csr_regions.items():
+            regions.append((region_name, region.origin, region.busword, region.obj))
     for csr_region in regions:
         module = None
         if hasattr(soc, csr_region[0]):
-            # raise ValueError("SOC has no module {} {}".format(csr_region[0], csr_region[3]))
             module = getattr(soc, csr_region[0])
             seen_modules.add(module)
         submodules = gather_submodules(module)
