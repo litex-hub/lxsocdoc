@@ -420,6 +420,8 @@ class DocumentedCSRRegion:
                         max_name_width = max(max_name_width, len(name))
 
                         description = f.description
+                        if description is None:
+                            description = ""
                         if note_pulses and f.pulse:
                             description = description + "\n\nWriting a 1 to this bit triggers the function."
                         for d in description.splitlines():
@@ -441,6 +443,8 @@ class DocumentedCSRRegion:
                         name = name.ljust(max_name_width)
 
                         description = f.description
+                        if description is None:
+                            description = ""
                         if note_pulses and f.pulse:
                             description = description + "\n\nWriting a 1 to this bit triggers the function."
 
