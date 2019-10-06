@@ -9,10 +9,7 @@ import inspect
 
 from .rst import print_table, print_rst
 
-def gather_submodules(module, depth=0, seen_modules=set(), submodules={
-        "event_managers": [],
-        "module_doc": [],
-    }):
+def gather_submodules_inner(module, depth, seen_modules, submodules):
     if module is None:
         return submodules
     if depth == 0:
@@ -20,18 +17,28 @@ def gather_submodules(module, depth=0, seen_modules=set(), submodules={
             # print("{} is an instance of ModuleDoc".format(module))
             submodules["module_doc"].append(module)
     for k,v in module._submodules:
-        # print("{}Submodule {} {}".format(" "*(depth*4), k, "xx"))
+        # print("{}Submodule {} {}".format(" "*(depth*4), k, v))
         if v not in seen_modules:
             seen_modules.add(v)
             if isinstance(v, EventManager):
-                # print("{} appears to be an EventManager".format(k))
+                # print("{}{} appears to be an EventManager".format(" "*(depth*4), k))
                 submodules["event_managers"].append(v)
 
             if isinstance(v, ModuleDoc):
                 submodules["module_doc"].append(v)
 
-            gather_submodules(v, depth + 1, seen_modules, submodules)
+            gather_submodules_inner(v, depth + 1, seen_modules, submodules)
     return submodules
+
+def gather_submodules(module):
+    depth = 0
+    seen_modules = set()
+    submodules = {
+        "event_managers": [],
+        "module_doc": [],
+    }
+
+    return gather_submodules_inner(module, depth, seen_modules, submodules)
 
 class ModuleNotDocumented(Exception):
     """Indicates a Module has no documentation or sub-documentation"""
