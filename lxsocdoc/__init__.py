@@ -40,8 +40,8 @@ def print_svd_register(csr, csr_address, description, svd):
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
     print('                    <resetValue>0x{:02x}</resetValue>'.format(csr.reset_value), file=svd)
     csr_address = csr_address + 4
+    print('                    <fields>', file=svd)
     if hasattr(csr, "fields") and len(csr.fields) > 0:
-        print('                    <fields>', file=svd)
         for field in csr.fields:
             print('                        <field>', file=svd)
             print('                            <name>{}</name>'.format(field.name), file=svd)
@@ -50,7 +50,23 @@ def print_svd_register(csr, csr_address, description, svd):
             print('                            <lsb>{}</lsb>'.format(field.offset), file=svd)
             print('                            <description><![CDATA[{}]]></description>'.format(reflow(field.description)), file=svd)
             print('                        </field>', file=svd)
-        print('                    </fields>', file=svd)
+    else:
+        field_size = csr.size
+        field_name = csr.short_name.lower()
+        # Strip off "ev_" from eventmanager fields
+        if field_name == "ev_enable":
+            field_name = "enable"
+        elif field_name == "ev_pending":
+            field_name = "pending"
+        elif field_name == "ev_status":
+            field_name = "status"
+        print('                        <field>', file=svd)
+        print('                            <name>{}</name>'.format(field_name), file=svd)
+        print('                            <msb>{}</msb>'.format(field_size - 1), file=svd)
+        print('                            <bitRange>[{}:{}]</bitRange>'.format(field_size - 1, 0), file=svd)
+        print('                            <lsb>{}</lsb>'.format(0), file=svd)
+        print('                        </field>', file=svd)
+    print('                    </fields>', file=svd)
     print('                </register>', file=svd)
 
 def generate_svd(soc, buildpath, vendor="litex", name="soc"):
