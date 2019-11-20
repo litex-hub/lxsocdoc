@@ -69,7 +69,7 @@ def print_svd_register(csr, csr_address, description, svd):
     print('                    </fields>', file=svd)
     print('                </register>', file=svd)
 
-def generate_svd(soc, buildpath, vendor="litex", name="soc"):
+def generate_svd(soc, buildpath, vendor="litex", name="soc", description=None):
     interrupts = {}
     for csr, irq in sorted(soc.soc_interrupt_map.items()):
         interrupts[csr] = irq
@@ -91,6 +91,8 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc"):
         print('<device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd" >', file=svd)
         print('    <vendor>{}</vendor>'.format(vendor), file=svd)
         print('    <name>{}</name>'.format(name.upper()), file=svd)
+        if description is not None:
+            print('    <description><![CDATA[{}]]></description>'.format(reflow(description)), file=svd)
         print('', file=svd)
         print('    <addressUnitBits>8</addressUnitBits>', file=svd)
         print('    <width>32</width>', file=svd)
