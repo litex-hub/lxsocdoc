@@ -121,7 +121,10 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc", description=None):
                     for i in range(len(csr.simple_csrs)):
                         (start, length, name) = sub_csr_bit_range(region.busword, csr, i)
                         sub_name = csr.name.upper() + "_" + name
-                        bits_str = "Bits {}-{} of `{}`.".format(start, start+length, csr.name)
+                        if length > 0:
+                            bits_str = "Bits {}-{} of `{}`.".format(start, start+length, csr.name)
+                        else:
+                            bits_str = "Bit {} of `{}`.".format(start, csr.name)
                         if is_first:
                             if description is not None:
                                 print_svd_register(csr.simple_csrs[i], csr_address, bits_str + " " + description, svd)
