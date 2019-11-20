@@ -36,7 +36,7 @@ def print_svd_register(csr, csr_address, description, svd):
     print('                <register>', file=svd)
     print('                    <name>{}</name>'.format(csr.short_numbered_name), file=svd)
     if description is not None:
-        print('                    <description>{}</description>'.format(description), file=svd)
+        print('                    <description><![CDATA[{}]]></description>'.format(description), file=svd)
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
     print('                    <resetValue>0x{:02x}</resetValue>'.format(csr.reset_value), file=svd)
     csr_address = csr_address + 4
