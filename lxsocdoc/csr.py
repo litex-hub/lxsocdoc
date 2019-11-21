@@ -118,7 +118,7 @@ class DocumentedCSRRegion:
                     if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
-                            if hasattr(source, "name"):
+                            if hasattr(source, "name") and source.name is not None:
                                 fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Level of the `{}` event".format(source.name))))
                             else:
                                 fields.append(DocumentedCSRField(CSRField("event{}".format(i), offset=i, description="Level of the `event{}` event".format(i))))
@@ -129,7 +129,7 @@ class DocumentedCSRRegion:
                     if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
-                            if hasattr(source, "name"):
+                            if hasattr(source, "name") and source.name is not None:
                                 fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description=source_description(source))))
                             else:
                                 fields.append(DocumentedCSRField(CSRField("event{}".format(i), offset=i, description=source_description(source))))
@@ -140,7 +140,7 @@ class DocumentedCSRRegion:
                     if dcsr.fields is None or len(dcsr.fields) == 0:
                         fields = []
                         for i, source in enumerate(sources):
-                            if hasattr(source, "name"):
+                            if hasattr(source, "name") and source.name is not None:
                                 fields.append(DocumentedCSRField(CSRField(source.name, offset=i, description="Write a `1` to enable the `{}` Event".format(source.name))))
                             else:
                                 fields.append(DocumentedCSRField(CSRField("event{}".format(i), offset=i, description="Write a `1` to enable the `{}` Event".format(i))))
