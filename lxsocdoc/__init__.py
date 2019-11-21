@@ -69,7 +69,7 @@ def print_svd_register(csr, csr_address, description, svd):
     print('                    </fields>', file=svd)
     print('                </register>', file=svd)
 
-def generate_svd(soc, buildpath, vendor="litex", name="soc", description=None):
+def generate_svd(soc, buildpath, vendor="litex", name="soc", filename=None, description=None):
     interrupts = {}
     for csr, irq in sorted(soc.soc_interrupt_map.items()):
         interrupts[csr] = irq
@@ -85,7 +85,9 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc", description=None):
     for csr_region in raw_regions:
         documented_regions.append(DocumentedCSRRegion(csr_region))
 
-    with open(buildpath + "/" + name + ".svd", "w", encoding="utf-8") as svd:
+    if filename is None:
+        filename = name + ".svd"
+    with open(buildpath + "/" + filename, "w", encoding="utf-8") as svd:
         print('<?xml version="1.0" encoding="utf-8"?>', file=svd)
         print('', file=svd)
         print('<device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd" >', file=svd)
