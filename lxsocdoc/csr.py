@@ -31,7 +31,7 @@ class DocumentedCSR:
             return reflow(docstring)
         return None
 
-    def __init__(self, name, address, short_numbered_name="", short_name="", reset=0, offset=0, size=8, description=None, fields=[]):
+    def __init__(self, name, address, short_numbered_name="", short_name="", reset=0, offset=0, size=8, description=None, access="read-write", fields=[]):
         self.name = name
         self.short_name = short_name
         self.short_numbered_name = short_numbered_name
@@ -43,6 +43,7 @@ class DocumentedCSR:
         self.description = self.trim(description)
         self.reset_value = reset
         self.fields = fields
+        self.access = access
         for f in self.fields:
             f.description = self.trim(f.description)
 
@@ -265,6 +266,10 @@ class DocumentedCSRRegion:
         atomic_write = False
         full_name = self.name.upper() + "_" + csr.name.upper()
         reset = 0
+        if isinstance(csr, CSRStatus):
+            access = "read-only"
+        else:
+            access = "read-write"
 
         if hasattr(csr, "fields"):
             fields = csr.fields.fields
@@ -296,19 +301,19 @@ class DocumentedCSRRegion:
                     self.csrs.append(DocumentedCSR(
                         sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
                         offset=start,
-                        description=d, fields=self.split_fields(fields, start, start + length)
+                        description=d, fields=self.split_fields(fields, start, start + length), access=access
                     ))
                 else:
                     self.csrs.append(DocumentedCSR(
                         sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
                         offset=start,
-                        description=bits_str, fields=self.split_fields(fields, start, start + length)
+                        description=bits_str, fields=self.split_fields(fields, start, start + length), access=access
                     ))
                 self.current_address += 4
         else:
             self.csrs.append(DocumentedCSR(
                 full_name, self.current_address, short_numbered_name=csr.name.upper(), short_name=csr.name.upper(), reset=reset, size=size,
-                description=description, fields=fields,
+                description=description, fields=fields, access=access
             ))
             self.current_address += 4
 
