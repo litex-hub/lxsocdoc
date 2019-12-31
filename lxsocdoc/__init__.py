@@ -39,6 +39,7 @@ def print_svd_register(csr, csr_address, description, svd):
         print('                    <description><![CDATA[{}]]></description>'.format(description), file=svd)
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
     print('                    <resetValue>0x{:02x}</resetValue>'.format(csr.reset_value), file=svd)
+    print('                    <size>{}</size>'.format(csr.size), file=svd)
     print('                    <access>{}</access>'.format(csr.access), file=svd)
     csr_address = csr_address + 4
     print('                    <fields>', file=svd)
