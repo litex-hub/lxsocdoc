@@ -32,14 +32,14 @@ def sub_csr_bit_range(busword, csr, offset):
     origin = i*busword
     return (origin, nbits, name)
 
-def print_svd_register(csr, csr_address, description, svd):
+def print_svd_register(csr, csr_address, description, length, svd):
     print('                <register>', file=svd)
     print('                    <name>{}</name>'.format(csr.short_numbered_name), file=svd)
     if description is not None:
         print('                    <description><![CDATA[{}]]></description>'.format(description), file=svd)
     print('                    <addressOffset>0x{:04x}</addressOffset>'.format(csr_address), file=svd)
     print('                    <resetValue>0x{:02x}</resetValue>'.format(csr.reset_value), file=svd)
-    print('                    <size>{}</size>'.format(csr.size), file=svd)
+    print('                    <size>{}</size>'.format(length), file=svd)
     print('                    <access>{}</access>'.format(csr.access), file=svd)
     csr_address = csr_address + 4
     print('                    <fields>', file=svd)
@@ -131,15 +131,16 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc", filename=None, desc
                             bits_str = "Bit {} of `{}`.".format(start, csr.name)
                         if is_first:
                             if description is not None:
-                                print_svd_register(csr.simple_csrs[i], csr_address, bits_str + " " + description, svd)
+                                print_svd_register(csr.simple_csrs[i], csr_address, bits_str + " " + description, length, svd)
                             else:
-                                print_svd_register(csr.simple_csrs[i], csr_address, bits_str, svd)
+                                print_svd_register(csr.simple_csrs[i], csr_address, bits_str, length, svd)
                             is_first = False
                         else:
-                            print_svd_register(csr.simple_csrs[i], csr_address, bits_str, svd)
+                            print_svd_register(csr.simple_csrs[i], csr_address, bits_str, length, svd)
                         csr_address = csr_address + 4
                 else:
-                    print_svd_register(csr, csr_address, description, svd)
+                    length = ((csr.size + region.busword - 1)//region.busword) * region.busword
+                    print_svd_register(csr, csr_address, description, length, svd)
                     csr_address = csr_address + 4
             print('            </registers>', file=svd)
             print('            <addressBlock>', file=svd)
