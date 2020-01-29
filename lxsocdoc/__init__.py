@@ -85,7 +85,7 @@ def generate_svd(soc, buildpath, vendor="litex", name="soc", filename=None, desc
         for region_name, region in soc.csr_regions.items():
             raw_regions.append((region_name, region.origin, region.busword, region.obj))
     for csr_region in raw_regions:
-        documented_regions.append(DocumentedCSRRegion(csr_region))
+        documented_regions.append(DocumentedCSRRegion(csr_region, csr_data_width=soc.csr_data_width))
 
     if filename is None:
         filename = name + ".svd"
@@ -214,7 +214,7 @@ def generate_docs(soc, base_dir, project_name="LiteX SoC Project",
             seen_modules.add(module)
         submodules = gather_submodules(module)
 
-        documented_region = DocumentedCSRRegion(csr_region, module, submodules)
+        documented_region = DocumentedCSRRegion(csr_region, module, submodules, csr_data_width=soc.csr_data_width)
         if documented_region.name in interrupts:
             documented_region.document_interrupt(soc, submodules, interrupts[documented_region.name])
         documented_regions.append(documented_region)

@@ -114,5 +114,5 @@ class DocumentedInterrupts(DocumentedModule):
 
         print("The following interrupts are assigned on this system:", file=stream)
         print_table(self.irq_table, stream)
-        
+
 

@@ -48,11 +48,12 @@ class DocumentedCSR:
             f.description = self.trim(f.description)
 
 class DocumentedCSRRegion:
-    def __init__(self, csr_region, module=None, submodules=[]):
+    def __init__(self, csr_region, module=None, submodules=[], csr_data_width=8):
         (self.name, self.origin, self.busword, self.raw_csrs) = csr_region
         self.current_address = self.origin
         self.sections = []
         self.csrs = []
+        self.csr_data_width = csr_data_width
 
         # If the section has extra documentation, gather it.
         if isinstance(module, ModuleDoc):
@@ -218,14 +219,14 @@ class DocumentedCSRRegion:
                 print("                {\"bits\": " + str(self.busword - bit_offset) + "}", file=stream)
         else:
             term=""
-            if reg.size != 8:
+            if reg.size != self.csr_data_width:
                 term=","
             attr_str = ""
             if reg.reset_value != 0:
                 attr_str = "\"attr\": 'reset: " + str(reg.reset_value) + "', "
             print("                {\"name\": \"" + reg.short_name.lower() + self.bit_range(reg.offset, reg.offset + reg.size, empty_if_zero=True) + "\", " + attr_str + "\"bits\": " + str(reg.size) + "}" + term, file=stream)
-            if reg.size != 8:
-                print("                {\"bits\": " + str(8 - reg.size) + "},", file=stream)
+            if reg.size != self.csr_data_width:
+                print("                {\"bits\": " + str(self.csr_data_width - reg.size) + "},", file=stream)
         print("            ], \"config\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1 }, \"options\": {\"hspace\": 400, \"bits\": " + str(self.busword) + ", \"lanes\": 1}", file=stream)
         print("        }", file=stream)
         print("", file=stream)
@@ -300,13 +301,13 @@ class DocumentedCSRRegion:
                         d = bits_str + " " + reflow(d)
                     self.csrs.append(DocumentedCSR(
                         sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
-                        offset=start,
+                        offset=start, size=self.csr_data_width,
                         description=d, fields=self.split_fields(fields, start, start + length), access=access
                     ))
                 else:
                     self.csrs.append(DocumentedCSR(
                         sub_name, self.current_address, short_numbered_name=name.upper(), short_name=csr.name.upper(), reset=(reset>>start)&((2**length)-1),
-                        offset=start,
+                        offset=start, size=self.csr_data_width,
                         description=bits_str, fields=self.split_fields(fields, start, start + length), access=access
                     ))
                 self.current_address += 4
